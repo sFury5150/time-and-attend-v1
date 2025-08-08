@@ -141,6 +141,45 @@ export type Database = {
           },
         ]
       }
+      invoice_analytics: {
+        Row: {
+          average_days_to_payment: number | null
+          created_at: string
+          id: string
+          month_year: string
+          outstanding_amount: number | null
+          paid_amount: number | null
+          total_amount: number | null
+          total_invoices: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          average_days_to_payment?: number | null
+          created_at?: string
+          id?: string
+          month_year: string
+          outstanding_amount?: number | null
+          paid_amount?: number | null
+          total_amount?: number | null
+          total_invoices?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          average_days_to_payment?: number | null
+          created_at?: string
+          id?: string
+          month_year?: string
+          outstanding_amount?: number | null
+          paid_amount?: number | null
+          total_amount?: number | null
+          total_invoices?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           created_at: string
@@ -191,8 +230,14 @@ export type Database = {
           due_date: string
           id: string
           invoice_number: string
+          is_recurring: boolean | null
           issue_date: string
+          next_invoice_date: string | null
           notes: string | null
+          parent_invoice_id: string | null
+          recurring_end_date: string | null
+          recurring_frequency: string | null
+          recurring_start_date: string | null
           status: string
           subtotal: number
           tax_amount: number
@@ -207,8 +252,14 @@ export type Database = {
           due_date: string
           id?: string
           invoice_number: string
+          is_recurring?: boolean | null
           issue_date?: string
+          next_invoice_date?: string | null
           notes?: string | null
+          parent_invoice_id?: string | null
+          recurring_end_date?: string | null
+          recurring_frequency?: string | null
+          recurring_start_date?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -223,8 +274,14 @@ export type Database = {
           due_date?: string
           id?: string
           invoice_number?: string
+          is_recurring?: boolean | null
           issue_date?: string
+          next_invoice_date?: string | null
           notes?: string | null
+          parent_invoice_id?: string | null
+          recurring_end_date?: string | null
+          recurring_frequency?: string | null
+          recurring_start_date?: string | null
           status?: string
           subtotal?: number
           tax_amount?: number
@@ -246,6 +303,48 @@ export type Database = {
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invoices_parent_invoice_id_fkey"
+            columns: ["parent_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_reminders: {
+        Row: {
+          created_at: string
+          email_sent_to: string
+          id: string
+          invoice_id: string
+          reminder_type: string
+          sent_at: string
+        }
+        Insert: {
+          created_at?: string
+          email_sent_to: string
+          id?: string
+          invoice_id: string
+          reminder_type: string
+          sent_at?: string
+        }
+        Update: {
+          created_at?: string
+          email_sent_to?: string
+          id?: string
+          invoice_id?: string
+          reminder_type?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -256,6 +355,7 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          reminder_preferences: Json | null
           role: string | null
           updated_at: string
           user_id: string
@@ -267,6 +367,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          reminder_preferences?: Json | null
           role?: string | null
           updated_at?: string
           user_id: string
@@ -278,6 +379,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          reminder_preferences?: Json | null
           role?: string | null
           updated_at?: string
           user_id?: string
