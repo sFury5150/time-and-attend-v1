@@ -10,7 +10,8 @@ import {
   Timer,
   Building2,
   UserCheck,
-  FileText
+  FileText,
+  MessageSquare
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -75,6 +76,7 @@ export function AppSidebar() {
     { title: 'Companies', url: '/dashboard/companies', icon: Building2 },
     { title: 'Customers', url: '/dashboard/customers', icon: UserCheck },
     { title: 'Invoices', url: '/dashboard/invoices', icon: FileText },
+    { title: 'Interactions', url: '/dashboard/interactions', icon: MessageSquare },
   ];
 
   const items = isManager ? managerItems : employeeItems;
@@ -172,11 +174,11 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
                     <NavLink
-                      to="/dashboard/settings"
+                      to="/dashboard/admin"
                       className={getNavCls}
                     >
                       <Settings className="h-4 w-4" />
-                      {!collapsed && <span>Settings</span>}
+                      {!collapsed && <span>Admin Settings</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

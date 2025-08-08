@@ -13,10 +13,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Plus, Edit, Trash2, FileText, Download, Eye, Send, Printer } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, FileText, Download, Eye, Send, Printer, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { generateInvoicePDF, previewInvoice } from '@/utils/invoicePDF';
+import { supabase } from '@/integrations/supabase/client';
 
 const InvoiceDetail = () => {
   const { id } = useParams();
@@ -28,7 +29,15 @@ const InvoiceDetail = () => {
   const [invoice, setInvoice] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
+  const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [sendFormData, setSendFormData] = useState({
+    recipientEmail: '',
+    recipientName: '',
+    message: ''
+  });
   const [itemFormData, setItemFormData] = useState({
     description: '',
     quantity: 1,
@@ -39,6 +48,15 @@ const InvoiceDetail = () => {
     if (invoices.length > 0 && id) {
       const foundInvoice = invoices.find(inv => inv.id === id);
       setInvoice(foundInvoice);
+      
+      // Pre-fill send form with customer data
+      if (foundInvoice?.customer) {
+        setSendFormData(prev => ({
+          ...prev,
+          recipientEmail: foundInvoice.customer.email || '',
+          recipientName: `${foundInvoice.customer.first_name} ${foundInvoice.customer.last_name}`
+        }));
+      }
     }
   }, [invoices, id]);
 
@@ -169,12 +187,65 @@ const InvoiceDetail = () => {
     }
   };
 
-  const sendInvoice = () => {
-    // Email sending will be implemented here
-    toast({
-      title: 'Send Invoice',
-      description: 'Email sending feature coming soon!',
-    });
+  const sendInvoice = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    setIsSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-invoice', {
+        body: {
+          invoiceId: invoice.id,
+          recipientEmail: sendFormData.recipientEmail,
+          recipientName: sendFormData.recipientName,
+          message: sendFormData.message
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Invoice sent',
+        description: `Invoice has been sent to ${sendFormData.recipientEmail}`,
+      });
+      
+      setIsSendDialogOpen(false);
+      setSendFormData(prev => ({ ...prev, message: '' }));
+    } catch (error: any) {
+      toast({
+        title: 'Error sending invoice',
+        description: error.message || 'Failed to send invoice. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handlePayInvoice = async () => {
+    setIsProcessingPayment(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          invoiceId: invoice.id,
+          returnUrl: window.location.href
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.url) {
+        // Open Stripe checkout in a new tab
+        window.open(data.url, '_blank');
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error processing payment',
+        description: error.message || 'Failed to process payment. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   if (loading) {
@@ -230,10 +301,79 @@ const InvoiceDetail = () => {
               <Download className="mr-2 h-4 w-4" />
               Download PDF
             </Button>
-            <Button onClick={sendInvoice}>
-              <Send className="mr-2 h-4 w-4" />
-              Send Invoice
-            </Button>
+            {invoice.status !== 'paid' && (
+              <Button 
+                variant="outline" 
+                onClick={handlePayInvoice}
+                disabled={isProcessingPayment}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                {isProcessingPayment ? 'Processing...' : 'Pay Online'}
+              </Button>
+            )}
+            <Dialog open={isSendDialogOpen} onOpenChange={setIsSendDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Invoice
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Send Invoice via Email</DialogTitle>
+                  <DialogDescription>
+                    Send this invoice to your customer via email with PDF attachment.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={sendInvoice}>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="recipientEmail" className="text-right">
+                        Email *
+                      </Label>
+                      <Input
+                        id="recipientEmail"
+                        type="email"
+                        value={sendFormData.recipientEmail}
+                        onChange={(e) => setSendFormData(prev => ({...prev, recipientEmail: e.target.value}))}
+                        className="col-span-3"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="recipientName" className="text-right">
+                        Name *
+                      </Label>
+                      <Input
+                        id="recipientName"
+                        value={sendFormData.recipientName}
+                        onChange={(e) => setSendFormData(prev => ({...prev, recipientName: e.target.value}))}
+                        className="col-span-3"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="message" className="text-right">
+                        Message
+                      </Label>
+                      <Textarea
+                        id="message"
+                        value={sendFormData.message}
+                        onChange={(e) => setSendFormData(prev => ({...prev, message: e.target.value}))}
+                        className="col-span-3"
+                        rows={3}
+                        placeholder="Optional personal message to include with the invoice..."
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" disabled={isSending}>
+                      {isSending ? 'Sending...' : 'Send Invoice'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
