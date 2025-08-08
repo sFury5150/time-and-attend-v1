@@ -106,8 +106,8 @@ export function AppSidebar() {
                 <Building className="w-6 h-6 md:w-5 md:h-5 text-white" />
               </div>
               <div className="min-w-0">
-                <h2 className="font-bold text-base md:text-sm text-foreground truncate">TimeTracker Pro</h2>
-                <p className="text-sm md:text-xs text-muted-foreground">Workforce Management</p>
+                <h2 className="font-bold text-base md:text-sm text-primary truncate">TimeTracker Pro</h2>
+                <p className="text-sm md:text-xs text-primary/80">Workforce Management</p>
               </div>
             </div>
           ) : (
