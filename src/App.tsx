@@ -6,6 +6,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
+import TimeTracking from "./pages/TimeTracking";
+import Schedules from "./pages/Schedules";
+import Employees from "./pages/Employees";
+import Locations from "./pages/Locations";
+import Reports from "./pages/Reports";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -21,6 +26,11 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/time" element={<TimeTracking />} />
+            <Route path="/dashboard/schedules" element={<Schedules />} />
+            <Route path="/dashboard/employees" element={<Employees />} />
+            <Route path="/dashboard/locations" element={<Locations />} />
+            <Route path="/dashboard/reports" element={<Reports />} />
             <Route path="/auth" element={<Auth />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
