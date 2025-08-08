@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useCustomers } from '@/hooks/useCustomers';
@@ -16,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
 const Invoices = () => {
+  const navigate = useNavigate();
   const { invoices, loading, createInvoice, updateInvoice, deleteInvoice } = useInvoices();
   const { customers } = useCustomers();
   const { toast } = useToast();
@@ -342,6 +344,7 @@ const Invoices = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => navigate(`/dashboard/invoices/${invoice.id}`)}
                           >
                             <Eye className="h-3 w-3" />
                           </Button>

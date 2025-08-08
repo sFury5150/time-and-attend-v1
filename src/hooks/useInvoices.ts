@@ -95,7 +95,7 @@ export const useInvoices = () => {
     }
   };
 
-  const addInvoiceItem = async (invoiceId: string, item: Omit<InvoiceItemInsert, 'invoice_id'>) => {
+  const addInvoiceItem = async (invoiceId: string, item: Omit<InvoiceItemInsert, 'invoice_id' | 'total_price'>) => {
     try {
       const totalPrice = (item.quantity || 1) * (item.unit_price || 0);
       
