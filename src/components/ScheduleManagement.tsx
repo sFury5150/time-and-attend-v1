@@ -10,60 +10,127 @@ import { Calendar, Clock, MapPin, Plus, Users } from 'lucide-react';
 import { useSchedules, Schedule, Profile } from '@/hooks/useSchedules';
 import { useToast } from '@/hooks/use-toast';
 
+interface Shift {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  notes: string;
+}
+
 const ScheduleManagement = () => {
   const { schedules, employees, createSchedule, updateSchedule, deleteSchedule } = useSchedules();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
-  const [title, setTitle] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [location, setLocation] = useState('');
-  const [notes, setNotes] = useState('');
+  const [shifts, setShifts] = useState<Shift[]>([
+    {
+      id: '1',
+      title: '',
+      startTime: '',
+      endTime: '',
+      location: '',
+      notes: ''
+    }
+  ]);
 
   const resetForm = () => {
     setSelectedEmployee('');
-    setTitle('');
-    setStartTime('');
-    setEndTime('');
-    setLocation('');
-    setNotes('');
+    setShifts([
+      {
+        id: '1',
+        title: '',
+        startTime: '',
+        endTime: '',
+        location: '',
+        notes: ''
+      }
+    ]);
+  };
+
+  const addShift = () => {
+    const newShift: Shift = {
+      id: Date.now().toString(),
+      title: '',
+      startTime: '',
+      endTime: '',
+      location: '',
+      notes: ''
+    };
+    setShifts([...shifts, newShift]);
+  };
+
+  const removeShift = (shiftId: string) => {
+    if (shifts.length > 1) {
+      setShifts(shifts.filter(shift => shift.id !== shiftId));
+    }
+  };
+
+  const updateShift = (shiftId: string, field: keyof Shift, value: string) => {
+    setShifts(shifts.map(shift => 
+      shift.id === shiftId ? { ...shift, [field]: value } : shift
+    ));
   };
 
   const handleCreateSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedEmployee || !title || !startTime || !endTime) {
+    if (!selectedEmployee) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields.",
+        description: "Please select an employee.",
         variant: "destructive"
       });
       return;
     }
 
-    const { error } = await createSchedule({
-      employee_id: selectedEmployee,
-      title,
-      start_time: startTime,
-      end_time: endTime,
-      location: location || undefined,
-      notes: notes || undefined
-    });
+    // Validate all shifts
+    for (const shift of shifts) {
+      if (!shift.title || !shift.startTime || !shift.endTime) {
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields for all shifts.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
 
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-    } else {
+    // Create all shifts
+    try {
+      for (const shift of shifts) {
+        const { error } = await createSchedule({
+          employee_id: selectedEmployee,
+          title: shift.title,
+          start_time: shift.startTime,
+          end_time: shift.endTime,
+          location: shift.location || undefined,
+          notes: shift.notes || undefined
+        });
+
+        if (error) {
+          toast({
+            title: "Error",
+            description: `Failed to create shift "${shift.title}": ${error}`,
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
       toast({
         title: "Success",
-        description: "Schedule created successfully.",
+        description: `Successfully created ${shifts.length} shift${shifts.length > 1 ? 's' : ''}.`,
       });
       resetForm();
       setIsCreateDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while creating schedules.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -115,14 +182,14 @@ const ScheduleManagement = () => {
               Create Schedule
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Schedule</DialogTitle>
               <DialogDescription>
-                Schedule work hours for an employee.
+                Schedule one or multiple shifts for an employee.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreateSchedule} className="space-y-4">
+            <form onSubmit={handleCreateSchedule} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="employee">Employee *</Label>
                 <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
@@ -139,63 +206,97 @@ const ScheduleManagement = () => {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="title">Shift Title *</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Morning Shift, Sales Floor"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start-time">Start Time *</Label>
-                  <Input
-                    id="start-time"
-                    type="datetime-local"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-medium">Shifts</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addShift}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Shift
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="end-time">End Time *</Label>
-                  <Input
-                    id="end-time"
-                    type="datetime-local"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Work location or department"
-                />
-              </div>
+                {shifts.map((shift, index) => (
+                  <Card key={shift.id} className="p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-medium">Shift {index + 1}</h4>
+                      {shifts.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeShift(shift.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Additional notes or instructions"
-                  rows={3}
-                />
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Shift Title *</Label>
+                        <Input
+                          value={shift.title}
+                          onChange={(e) => updateShift(shift.id, 'title', e.target.value)}
+                          placeholder="e.g., Morning Shift, Sales Floor"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Start Time *</Label>
+                          <Input
+                            type="datetime-local"
+                            value={shift.startTime}
+                            onChange={(e) => updateShift(shift.id, 'startTime', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>End Time *</Label>
+                          <Input
+                            type="datetime-local"
+                            value={shift.endTime}
+                            onChange={(e) => updateShift(shift.id, 'endTime', e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Location</Label>
+                        <Input
+                          value={shift.location}
+                          onChange={(e) => updateShift(shift.id, 'location', e.target.value)}
+                          placeholder="Work location or department"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Notes</Label>
+                        <Textarea
+                          value={shift.notes}
+                          onChange={(e) => updateShift(shift.id, 'notes', e.target.value)}
+                          placeholder="Additional notes or instructions"
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
 
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">Create Schedule</Button>
+                <Button type="submit">
+                  Create {shifts.length} Shift{shifts.length > 1 ? 's' : ''}
+                </Button>
               </div>
             </form>
           </DialogContent>
