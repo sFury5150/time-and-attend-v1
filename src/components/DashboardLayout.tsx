@@ -29,11 +29,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        {/* Global Header with Sidebar Trigger */}
-        <header className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <SidebarTrigger className="ml-2" />
-          <div className="flex-1 flex items-center justify-center">
-            <span className="text-sm font-medium text-muted-foreground">
+        {/* Mobile-optimized Header with larger touch targets */}
+        <header className="fixed top-0 left-0 right-0 z-50 h-14 md:h-12 flex items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 md:px-0">
+          <SidebarTrigger className="ml-2 h-10 w-10 md:h-8 md:w-8 touch-manipulation" />
+          <div className="flex-1 flex items-center justify-center px-4">
+            <span className="text-xs md:text-sm font-medium text-muted-foreground truncate max-w-[200px] md:max-w-none">
               Welcome back, {user.email}
             </span>
           </div>
@@ -41,9 +41,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
         <AppSidebar />
 
-        {/* Main Content */}
-        <main className="flex-1 pt-12">
-          <div className="container mx-auto p-6">
+        {/* Main Content with mobile-optimized spacing */}
+        <main className="flex-1 pt-14 md:pt-12">
+          <div className="container mx-auto p-3 md:p-6 max-w-full">
             {children}
           </div>
         </main>

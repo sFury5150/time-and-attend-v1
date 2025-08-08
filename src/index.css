@@ -173,5 +173,35 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-size: 16px; /* Ensures minimum readable text size on mobile */
+    line-height: 1.5;
+  }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Ensure touch targets are at least 44px */
+  button, 
+  [role="button"], 
+  input[type="submit"], 
+  input[type="button"], 
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve tap highlighting */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Better scrolling on mobile */
+  .overflow-y-auto, .overflow-auto {
+    -webkit-overflow-scrolling: touch;
   }
 }

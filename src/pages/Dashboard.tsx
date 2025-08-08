@@ -5,18 +5,18 @@ import { Users, Calendar, MapPin, BarChart3, Clock, Building, TrendingUp } from 
 const Dashboard = () => {
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2 leading-tight">
             Dashboard Overview
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             Welcome to your workforce management dashboard.
           </p>
         </div>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Key Metrics with mobile-optimized grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Employees</CardTitle>
@@ -62,8 +62,8 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Quick Actions with mobile-optimized grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -158,33 +158,33 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3 p-3 border rounded-lg">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-green-600" />
+            <div className="space-y-3 md:space-y-4">
+              <div className="flex items-center space-x-3 p-4 md:p-3 border rounded-lg touch-manipulation">
+                <div className="w-10 h-10 md:w-8 md:h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-5 h-5 md:w-4 md:h-4 text-green-600" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">John Smith clocked in</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">John Smith clocked in</p>
                   <p className="text-xs text-muted-foreground">2 minutes ago • Main Office</p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3 p-3 border rounded-lg">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Calendar className="w-4 h-4 text-blue-600" />
+              <div className="flex items-center space-x-3 p-4 md:p-3 border rounded-lg touch-manipulation">
+                <div className="w-10 h-10 md:w-8 md:h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-5 h-5 md:w-4 md:h-4 text-blue-600" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Schedule updated for tomorrow</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">Schedule updated for tomorrow</p>
                   <p className="text-xs text-muted-foreground">5 minutes ago • 3 employees affected</p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3 p-3 border rounded-lg">
-                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <Users className="w-4 h-4 text-yellow-600" />
+              <div className="flex items-center space-x-3 p-4 md:p-3 border rounded-lg touch-manipulation">
+                <div className="w-10 h-10 md:w-8 md:h-8 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 md:w-4 md:h-4 text-yellow-600" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">New employee onboarded</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">New employee onboarded</p>
                   <p className="text-xs text-muted-foreground">1 hour ago • Sarah Johnson joined Sales</p>
                 </div>
               </div>

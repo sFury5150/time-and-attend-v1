@@ -95,46 +95,46 @@ export function AppSidebar() {
 
   return (
     <Sidebar
-      className={collapsed ? 'w-14' : 'w-60'}
+      className={`${collapsed ? 'w-16 md:w-14' : 'w-72 md:w-60'} transition-all duration-300 ease-in-out`}
     >
       <SidebarContent>
-        {/* Company Header */}
-        <div className="p-4 border-b">
+        {/* Mobile-optimized Company Header */}
+        <div className="p-4 md:p-3 border-b">
           {!collapsed ? (
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center justify-center w-8 h-8 bg-gradient-primary rounded-lg">
-                <Building className="w-5 h-5 text-white" />
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center justify-center w-10 h-10 md:w-8 md:h-8 bg-gradient-primary rounded-lg flex-shrink-0">
+                <Building className="w-6 h-6 md:w-5 md:h-5 text-white" />
               </div>
-              <div>
-                <h2 className="font-bold text-foreground">TimeTracker Pro</h2>
-                <p className="text-xs text-muted-foreground">Workforce Management</p>
+              <div className="min-w-0">
+                <h2 className="font-bold text-base md:text-sm text-foreground truncate">TimeTracker Pro</h2>
+                <p className="text-sm md:text-xs text-muted-foreground">Workforce Management</p>
               </div>
             </div>
           ) : (
             <div className="flex justify-center">
-              <div className="flex items-center justify-center w-8 h-8 bg-gradient-primary rounded-lg">
-                <Building className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-center w-10 h-10 md:w-8 md:h-8 bg-gradient-primary rounded-lg">
+                <Building className="w-6 h-6 md:w-5 md:h-5 text-white" />
               </div>
             </div>
           )}
         </div>
 
         <SidebarGroup>
-          <SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sm md:text-xs px-3 py-2">
             {isManager ? 'Management' : 'Employee'}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild className="h-12 md:h-10 touch-manipulation">
                     <NavLink
                       to={item.url}
                       end={item.url === '/dashboard'}
                       className={getNavCls}
                     >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="h-6 w-6 md:h-4 md:w-4 flex-shrink-0" />
+                      {!collapsed && <span className="text-base md:text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -145,18 +145,18 @@ export function AppSidebar() {
 
         {isManager && (
           <SidebarGroup>
-            <SidebarGroupLabel>Customer Management</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sm md:text-xs px-3 py-2">Customer Management</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {crmItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild className="h-12 md:h-10 touch-manipulation">
                       <NavLink
                         to={item.url}
                         className={getNavCls}
                       >
-                        <item.icon className="h-4 w-4" />
-                        {!collapsed && <span>{item.title}</span>}
+                        <item.icon className="h-6 w-6 md:h-4 md:w-4 flex-shrink-0" />
+                        {!collapsed && <span className="text-base md:text-sm">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -168,17 +168,17 @@ export function AppSidebar() {
 
         {isManager && (
           <SidebarGroup>
-            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sm md:text-xs px-3 py-2">Administration</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild className="h-12 md:h-10 touch-manipulation">
                     <NavLink
                       to="/dashboard/admin"
                       className={getNavCls}
                     >
-                      <Settings className="h-4 w-4" />
-                      {!collapsed && <span>Admin Settings</span>}
+                      <Settings className="h-6 w-6 md:h-4 md:w-4 flex-shrink-0" />
+                      {!collapsed && <span className="text-base md:text-sm">Admin Settings</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
