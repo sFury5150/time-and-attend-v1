@@ -7,7 +7,10 @@ import {
   MapPin, 
   Settings, 
   Building,
-  Timer
+  Timer,
+  Building2,
+  UserCheck,
+  FileText
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -66,6 +69,12 @@ export function AppSidebar() {
     { title: 'Employees', url: '/dashboard/employees', icon: Users },
     { title: 'Locations', url: '/dashboard/locations', icon: MapPin },
     { title: 'Reports', url: '/dashboard/reports', icon: BarChart3 },
+  ];
+
+  const crmItems = [
+    { title: 'Companies', url: '/dashboard/companies', icon: Building2 },
+    { title: 'Customers', url: '/dashboard/customers', icon: UserCheck },
+    { title: 'Invoices', url: '/dashboard/invoices', icon: FileText },
   ];
 
   const items = isManager ? managerItems : employeeItems;
@@ -131,6 +140,29 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isManager && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Customer Management</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {crmItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        className={getNavCls}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {isManager && (
           <SidebarGroup>

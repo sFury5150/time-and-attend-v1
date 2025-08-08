@@ -11,6 +11,9 @@ import Schedules from "./pages/Schedules";
 import Employees from "./pages/Employees";
 import Locations from "./pages/Locations";
 import Reports from "./pages/Reports";
+import Companies from "./pages/Companies";
+import Customers from "./pages/Customers";
+import Invoices from "./pages/Invoices";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +34,9 @@ const App = () => (
             <Route path="/dashboard/employees" element={<Employees />} />
             <Route path="/dashboard/locations" element={<Locations />} />
             <Route path="/dashboard/reports" element={<Reports />} />
+            <Route path="/dashboard/companies" element={<Companies />} />
+            <Route path="/dashboard/customers" element={<Customers />} />
+            <Route path="/dashboard/invoices" element={<Invoices />} />
             <Route path="/auth" element={<Auth />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
