@@ -45,4 +45,15 @@ const AvatarFallback = React.forwardRef<
 ))
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
-export { Avatar, AvatarImage, AvatarFallback }
+const AvatarInitials = ({ name }: { name: string }) => {
+  const initials = name
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
+  
+  return <span className="text-sm font-medium">{initials}</span>;
+};
+
+export { Avatar, AvatarImage, AvatarFallback, AvatarInitials }
