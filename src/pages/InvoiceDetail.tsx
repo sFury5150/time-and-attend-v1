@@ -311,14 +311,38 @@ const InvoiceDetail = () => {
                 {isProcessingPayment ? 'Processing...' : 'Pay Online'}
               </Button>
             )}
-            <Dialog open={isSendDialogOpen} onOpenChange={setIsSendDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Send className="mr-2 h-4 w-4" />
-                  Send Invoice
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const subject = `Invoice ${invoice.invoice_number} - ${formatCurrency(invoice.total_amount)}`;
+                  const body = `Dear ${invoice.customer?.first_name} ${invoice.customer?.last_name},
+
+Please find attached your invoice details:
+
+Invoice Number: ${invoice.invoice_number}
+Issue Date: ${format(new Date(invoice.issue_date), 'MMM dd, yyyy')}
+Due Date: ${format(new Date(invoice.due_date), 'MMM dd, yyyy')}
+Total Amount: ${formatCurrency(invoice.total_amount)}
+
+Thank you for your business!
+
+Best regards`;
+                  const mailto = `mailto:${invoice.customer?.email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                  window.open(mailto, '_self');
+                }}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Email Client
+              </Button>
+              <Dialog open={isSendDialogOpen} onOpenChange={setIsSendDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Invoice
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Send Invoice via Email</DialogTitle>
                   <DialogDescription>
@@ -372,8 +396,9 @@ const InvoiceDetail = () => {
                     </Button>
                   </DialogFooter>
                 </form>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </div>
 
