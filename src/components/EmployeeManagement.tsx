@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarInitials } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Building, Mail, Phone, Calendar, MapPin } from 'lucide-react';
 import { useSchedules, Profile } from '@/hooks/useSchedules';
 
@@ -104,7 +104,7 @@ const EmployeeManagement = () => {
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-12 w-12">
                     <AvatarFallback>
-                      <AvatarInitials name={`${employee.first_name} ${employee.last_name}`} />
+                      {((employee.first_name?.[0] || '') + (employee.last_name?.[0] || '')).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
