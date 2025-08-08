@@ -6,9 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Calendar, Clock, MapPin, Plus, Users } from 'lucide-react';
+import { Calendar, Clock, MapPin, Plus, Users, CalendarDays, List } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSchedules, Schedule, Profile } from '@/hooks/useSchedules';
 import { useToast } from '@/hooks/use-toast';
+import ScheduleCalendar from './ScheduleCalendar';
 
 interface Shift {
   id: string;
@@ -350,63 +352,82 @@ const ScheduleManagement = () => {
         </Card>
       </div>
 
-      {/* Schedule List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Schedules</CardTitle>
-          <CardDescription>
-            View and manage all scheduled shifts
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {schedules.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No schedules found</p>
-                <p className="text-sm">Create your first schedule to get started</p>
+      {/* Schedule Views */}
+      <Tabs defaultValue="list" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="list" className="flex items-center gap-2">
+            <List className="w-4 h-4" />
+            List View
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <CalendarDays className="w-4 h-4" />
+            Calendar View
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="list" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Upcoming Schedules</CardTitle>
+              <CardDescription>
+                View and manage all scheduled shifts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {schedules.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No schedules found</p>
+                    <p className="text-sm">Create your first schedule to get started</p>
+                  </div>
+                ) : (
+                  schedules.map((schedule) => (
+                    <div
+                      key={schedule.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                          <h4 className="font-medium">{schedule.title}</h4>
+                          {getStatusBadge(schedule.status)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">{getEmployeeName(schedule.employee_id)}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {formatDateTime(schedule.start_time)} - {formatDateTime(schedule.end_time)}
+                          </span>
+                          {schedule.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {schedule.location}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">
+                          {formatDuration(schedule.start_time, schedule.end_time)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(schedule.start_time).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            ) : (
-              schedules.map((schedule) => (
-                <div
-                  key={schedule.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <h4 className="font-medium">{schedule.title}</h4>
-                      {getStatusBadge(schedule.status)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <span className="font-medium">{getEmployeeName(schedule.employee_id)}</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatDateTime(schedule.start_time)} - {formatDateTime(schedule.end_time)}
-                      </span>
-                      {schedule.location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {schedule.location}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold">
-                      {formatDuration(schedule.start_time, schedule.end_time)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(schedule.start_time).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="calendar" className="mt-6">
+          <ScheduleCalendar />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
