@@ -1,7 +1,17 @@
 import { Button } from "@/components/ui/button";
-import { Clock } from "lucide-react";
+import { Clock, LogOut, User } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -29,12 +39,27 @@ const Header = () => {
           </nav>
 
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" className="hidden sm:inline-flex">
-              Sign In
-            </Button>
-            <Button className="bg-gradient-primary hover:opacity-90 transition-opacity">
-              Get Started
-            </Button>
+            {user ? (
+              <>
+                <div className="hidden sm:flex items-center space-x-2 text-sm text-muted-foreground">
+                  <User className="w-4 h-4" />
+                  <span>{user.email}</span>
+                </div>
+                <Button variant="ghost" onClick={handleSignOut} className="flex items-center space-x-2">
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => navigate('/auth')}>
+                  Sign In
+                </Button>
+                <Button className="bg-gradient-primary hover:opacity-90 transition-opacity" onClick={() => navigate('/auth')}>
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
