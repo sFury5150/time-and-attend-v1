@@ -1,189 +1,356 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import type { Database } from '@/integrations/supabase/types';
+import { useState, useEffect, useCallback } from 'react'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
+import { useGeolocation } from '@/hooks/useGeolocation'
+import { useLocations } from '@/hooks/useLocations'
+import type {
+  TimeEntry,
+  ClockInRequest,
+  ClockOutRequest,
+  GeolocationCoordinates,
+} from '@/types'
 
-type TimeEntry = Database['public']['Tables']['time_entries']['Row'];
+export interface UseTimeTrackingState {
+  currentEntry: TimeEntry | null
+  recentEntries: TimeEntry[]
+  loading: boolean
+  error: Error | null
+}
 
-export { type TimeEntry };
+export interface ClockInOptions {
+  shift_id?: string
+  notes?: string
+  skipGeofenceValidation?: boolean
+}
 
-export const useTimeTracking = () => {
-  const { user } = useAuth();
-  const [currentEntry, setCurrentEntry] = useState<TimeEntry | null>(null);
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+export interface ClockOutOptions {
+  break_minutes?: number
+  notes?: string
+  skipGeofenceValidation?: boolean
+}
+
+export const useTimeTracking = (companyId?: string) => {
+  const { user } = useAuth()
+  const { getLocation } = useGeolocation()
+  const { validateGeofence } = useLocations(companyId)
+
+  const [state, setState] = useState<UseTimeTrackingState>({
+    currentEntry: null,
+    recentEntries: [],
+    loading: true,
+    error: null,
+  })
 
   // Get current active time entry
-  const fetchCurrentEntry = async () => {
-    if (!user) return;
+  const fetchCurrentEntry = useCallback(async (employeeId?: string) => {
+    if (!user && !employeeId) return
 
-    const { data, error } = await supabase
-      .from('time_entries')
-      .select('*')
-      .eq('user_id', user.id)
-      .in('status', ['clocked_in', 'on_break'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    try {
+      let query = supabase
+        .from('time_entries')
+        .select('*')
+        .eq('status', 'active')
 
-    if (error) {
-      console.error('Error fetching current entry:', error);
-      return;
+      if (employeeId) {
+        query = query.eq('employee_id', employeeId)
+      }
+
+      const { data, error } = await query
+        .order('clock_in_time', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (error) throw error
+
+      setState((prev) => ({
+        ...prev,
+        currentEntry: data,
+      }))
+
+      return data
+    } catch (error) {
+      console.error('Error fetching current entry:', error)
+      return null
     }
-
-    setCurrentEntry(data);
-  };
+  }, [user])
 
   // Get recent time entries
-  const fetchTimeEntries = async () => {
-    if (!user) return;
+  const fetchRecentEntries = useCallback(
+    async (employeeId?: string, limit = 20) => {
+      if (!user && !employeeId) return
 
-    const { data, error } = await supabase
-      .from('time_entries')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
+      try {
+        setState((prev) => ({ ...prev, loading: true, error: null }))
 
-    if (error) {
-      console.error('Error fetching time entries:', error);
-      return;
-    }
+        let query = supabase.from('time_entries').select('*')
 
-    setTimeEntries(data || []);
-  };
+        if (employeeId) {
+          query = query.eq('employee_id', employeeId)
+        }
+
+        const { data, error } = await query
+          .order('clock_in_time', { ascending: false })
+          .limit(limit)
+
+        if (error) throw error
+
+        setState((prev) => ({
+          ...prev,
+          recentEntries: data || [],
+          loading: false,
+        }))
+
+        return data || []
+      } catch (error) {
+        const err = error as Error
+        setState((prev) => ({
+          ...prev,
+          error: err,
+          loading: false,
+        }))
+        return []
+      }
+    },
+    [user]
+  )
 
   // Clock in
-  const clockIn = async (location?: any) => {
-    if (!user) return { error: 'User not authenticated' };
+  const clockIn = useCallback(
+    async (employeeId: string, options: ClockInOptions = {}) => {
+      try {
+        if (!user) {
+          throw new Error('User not authenticated')
+        }
 
-    const { data, error } = await supabase
-      .from('time_entries')
-      .insert({
-        user_id: user.id,
-        status: 'clocked_in',
-        location_data: location
-      })
-      .select()
-      .single();
+        // Get user's current location
+        let coordinates: GeolocationCoordinates
+        try {
+          coordinates = await getLocation()
+        } catch (error) {
+          throw new Error(
+            `Failed to get location: ${(error as Error).message}`
+          )
+        }
 
-    if (error) {
-      return { error: error.message };
-    }
+        // Validate geofence if shift is provided
+        if (options.shift_id && !options.skipGeofenceValidation) {
+          try {
+            const shift = await supabase
+              .from('shifts')
+              .select('location_id')
+              .eq('id', options.shift_id)
+              .single()
 
-    setCurrentEntry(data);
-    await fetchTimeEntries();
-    return { data };
-  };
+            if (shift.data) {
+              const validation = await validateGeofence(
+                shift.data.location_id,
+                coordinates
+              )
+
+              if (!validation.isValid) {
+                throw new Error(
+                  validation.error ||
+                    'User is outside geofence for this location'
+                )
+              }
+            }
+          } catch (error) {
+            const err = error as Error
+            throw new Error(`Geofence validation failed: ${err.message}`)
+          }
+        }
+
+        // Create time entry
+        const { data, error } = await supabase
+          .from('time_entries')
+          .insert({
+            employee_id: employeeId,
+            shift_id: options.shift_id || null,
+            clock_in_time: new Date().toISOString(),
+            clock_in_lat: coordinates.latitude,
+            clock_in_lng: coordinates.longitude,
+            status: 'active',
+            geofence_validated: !options.skipGeofenceValidation,
+            notes: options.notes,
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        setState((prev) => ({
+          ...prev,
+          currentEntry: data,
+        }))
+
+        await fetchRecentEntries(employeeId)
+
+        return { success: true, data }
+      } catch (error) {
+        const err = error as Error
+        setState((prev) => ({
+          ...prev,
+          error: err,
+        }))
+        return { success: false, error: err.message }
+      }
+    },
+    [user, getLocation, validateGeofence, fetchRecentEntries]
+  )
 
   // Clock out
-  const clockOut = async () => {
-    if (!user || !currentEntry) return { error: 'No active time entry' };
+  const clockOut = useCallback(
+    async (
+      timeEntryId: string,
+      options: ClockOutOptions = {}
+    ) => {
+      try {
+        if (!user) {
+          throw new Error('User not authenticated')
+        }
 
-    const { data, error } = await supabase
-      .from('time_entries')
-      .update({
-        clock_out: new Date().toISOString(),
-        status: 'clocked_out'
-      })
-      .eq('id', currentEntry.id)
-      .select()
-      .single();
+        if (!timeEntryId) {
+          throw new Error('No active time entry')
+        }
 
-    if (error) {
-      return { error: error.message };
-    }
+        // Get user's current location
+        let coordinates: GeolocationCoordinates
+        try {
+          coordinates = await getLocation()
+        } catch (error) {
+          throw new Error(
+            `Failed to get location: ${(error as Error).message}`
+          )
+        }
 
-    setCurrentEntry(null);
-    await fetchTimeEntries();
-    return { data };
-  };
+        // Get current entry to validate
+        const { data: currentEntry } = await supabase
+          .from('time_entries')
+          .select('*')
+          .eq('id', timeEntryId)
+          .single()
 
-  // Start break
-  const startBreak = async () => {
-    if (!user || !currentEntry) return { error: 'No active time entry' };
+        if (!currentEntry) {
+          throw new Error('Time entry not found')
+        }
 
-    const { data, error } = await supabase
-      .from('time_entries')
-      .update({
-        break_start: new Date().toISOString(),
-        status: 'on_break'
-      })
-      .eq('id', currentEntry.id)
-      .select()
-      .single();
+        // Calculate total hours
+        const clockOutTime = new Date().toISOString()
+        const clockInTime = new Date(currentEntry.clock_in_time).getTime()
+        const clockOutTimeMs = new Date(clockOutTime).getTime()
+        const totalMinutes = (clockOutTimeMs - clockInTime) / (1000 * 60)
+        const breakMinutes = options.break_minutes || 0
+        const totalHours = (totalMinutes - breakMinutes) / 60
 
-    if (error) {
-      return { error: error.message };
-    }
+        // Update time entry
+        const { data, error } = await supabase
+          .from('time_entries')
+          .update({
+            clock_out_time: clockOutTime,
+            clock_out_lat: coordinates.latitude,
+            clock_out_lng: coordinates.longitude,
+            status: 'clocked_out',
+            break_minutes: breakMinutes,
+            total_hours: Math.round(totalHours * 100) / 100,
+            geofence_validated:
+              !options.skipGeofenceValidation || currentEntry.geofence_validated,
+            notes: options.notes || currentEntry.notes,
+          })
+          .eq('id', timeEntryId)
+          .select()
+          .single()
 
-    setCurrentEntry(data);
-    return { data };
-  };
+        if (error) throw error
 
-  // End break
-  const endBreak = async () => {
-    if (!user || !currentEntry) return { error: 'No active time entry' };
+        setState((prev) => ({
+          ...prev,
+          currentEntry: null,
+        }))
 
-    const { data, error } = await supabase
-      .from('time_entries')
-      .update({
-        break_end: new Date().toISOString(),
-        status: 'clocked_in'
-      })
-      .eq('id', currentEntry.id)
-      .select()
-      .single();
+        await fetchRecentEntries(currentEntry.employee_id)
 
-    if (error) {
-      return { error: error.message };
-    }
+        return { success: true, data }
+      } catch (error) {
+        const err = error as Error
+        setState((prev) => ({
+          ...prev,
+          error: err,
+        }))
+        return { success: false, error: err.message }
+      }
+    },
+    [user, getLocation, fetchRecentEntries]
+  )
 
-    setCurrentEntry(data);
-    return { data };
-  };
+  // Get entry details
+  const getEntryDetails = useCallback(
+    async (timeEntryId: string): Promise<TimeEntry | null> => {
+      try {
+        const { data, error } = await supabase
+          .from('time_entries')
+          .select('*')
+          .eq('id', timeEntryId)
+          .single()
 
+        if (error) throw error
+        return data
+      } catch (error) {
+        console.error('Error fetching entry details:', error)
+        return null
+      }
+    },
+    []
+  )
+
+  // Set up real-time subscription
   useEffect(() => {
     if (user) {
-      fetchCurrentEntry();
-      fetchTimeEntries();
-      setLoading(false);
+      // Get current employee ID from user's profile
+      supabase
+        .from('employees')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            const employeeId = data[0].id
+            fetchCurrentEntry(employeeId)
+            fetchRecentEntries(employeeId)
 
-      // Set up real-time subscription
-      const channel = supabase
-        .channel('time_entries_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'time_entries',
-            filter: `user_id=eq.${user.id}`
-          },
-          () => {
-            fetchCurrentEntry();
-            fetchTimeEntries();
+            // Set up real-time subscription
+            const channel = supabase
+              .channel(`time_entries_employee_${employeeId}`)
+              .on(
+                'postgres_changes',
+                {
+                  event: '*',
+                  schema: 'public',
+                  table: 'time_entries',
+                  filter: `employee_id=eq.${employeeId}`,
+                },
+                () => {
+                  fetchCurrentEntry(employeeId)
+                  fetchRecentEntries(employeeId)
+                }
+              )
+              .subscribe()
+
+            return () => {
+              supabase.removeChannel(channel)
+            }
           }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
+        })
     }
-  }, [user]);
+  }, [user, fetchCurrentEntry, fetchRecentEntries])
 
   return {
-    currentEntry,
-    timeEntries,
-    loading,
+    ...state,
     clockIn,
     clockOut,
-    startBreak,
-    endBreak,
+    getEntryDetails,
     refetch: () => {
-      fetchCurrentEntry();
-      fetchTimeEntries();
-    }
-  };
-};
+      fetchCurrentEntry()
+      fetchRecentEntries()
+    },
+  }
+}
