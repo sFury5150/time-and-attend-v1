@@ -24,6 +24,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import EmployeeMobileApp from "./pages/EmployeeMobileApp";
 import ManagerDashboard from "./pages/ManagerDashboard";
+import RouteTest from "./pages/RouteTest";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const AppContent = () => {
       <Route path="/dashboard/manager" element={<ManagerDashboard />} />
       
       <Route path="/auth" element={<Auth />} />
+      <Route path="/dashboard/route-test" element={<RouteTest />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
