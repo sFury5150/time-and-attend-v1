@@ -1,155 +1,349 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import type { Database } from '@/integrations/supabase/types';
+import { useState, useEffect, useCallback } from 'react'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
+import type {
+  Shift,
+  CreateShiftRequest,
+  UpdateShiftRequest,
+  ShiftFilter,
+} from '@/types'
 
-type Schedule = Database['public']['Tables']['schedules']['Row'];
-type Profile = Database['public']['Tables']['profiles']['Row'];
+export interface UseSchedulesState {
+  shifts: Shift[]
+  selectedShift: Shift | null
+  loading: boolean
+  error: Error | null
+}
 
-export { type Schedule, type Profile };
+export const useSchedules = (companyId?: string) => {
+  const { user } = useAuth()
+  const [state, setState] = useState<UseSchedulesState>({
+    shifts: [],
+    selectedShift: null,
+    loading: true,
+    error: null,
+  })
 
-export const useSchedules = () => {
-  const { user } = useAuth();
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [employees, setEmployees] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Fetch shifts
+  const fetchShifts = useCallback(
+    async (cId?: string, filters?: ShiftFilter) => {
+      try {
+        setState((prev) => ({ ...prev, loading: true, error: null }))
 
-  // Fetch schedules based on user role
-  const fetchSchedules = async () => {
-    if (!user) return;
+        let query = supabase.from('shifts').select('*')
 
-    const { data, error } = await supabase
-      .from('schedules')
-      .select('*')
-      .order('start_time', { ascending: true });
+        // Filter by company
+        if (cId) {
+          query = query.eq('company_id', cId)
+        } else if (filters?.company_id) {
+          query = query.eq('company_id', filters.company_id)
+        }
 
-    if (error) {
-      console.error('Error fetching schedules:', error);
-      return;
-    }
+        // Apply additional filters
+        if (filters?.employee_id) {
+          query = query.eq('employee_id', filters.employee_id)
+        }
 
-    setSchedules(data || []);
-  };
+        if (filters?.location_id) {
+          query = query.eq('location_id', filters.location_id)
+        }
 
-  // Fetch all employees (for managers)
-  const fetchEmployees = async () => {
-    if (!user) return;
+        if (filters?.status) {
+          query = query.eq('status', filters.status)
+        }
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('first_name', { ascending: true });
+        // Date range filters
+        if (filters?.date_from) {
+          query = query.gte('start_time', filters.date_from)
+        }
 
-    if (error) {
-      console.error('Error fetching employees:', error);
-      return;
-    }
+        if (filters?.date_to) {
+          query = query.lte('end_time', filters.date_to)
+        }
 
-    setEmployees(data || []);
-  };
+        const { data, error } = await query.order('start_time', {
+          ascending: true,
+        })
 
-  // Create a new schedule
-  const createSchedule = async (scheduleData: {
-    employee_id: string;
-    title: string;
-    start_time: string;
-    end_time: string;
-    location?: string;
-    notes?: string;
-  }) => {
-    if (!user) return { error: 'User not authenticated' };
+        if (error) throw error
 
-    const { data, error } = await supabase
-      .from('schedules')
-      .insert({
-        ...scheduleData,
-        created_by: user.id
+        setState((prev) => ({
+          ...prev,
+          shifts: data || [],
+          loading: false,
+        }))
+
+        return data || []
+      } catch (error) {
+        const err = error as Error
+        setState((prev) => ({
+          ...prev,
+          error: err,
+          loading: false,
+        }))
+        return []
+      }
+    },
+    []
+  )
+
+  // Get single shift
+  const getShift = useCallback(
+    async (shiftId: string): Promise<Shift | null> => {
+      try {
+        const { data, error } = await supabase
+          .from('shifts')
+          .select('*')
+          .eq('id', shiftId)
+          .single()
+
+        if (error) throw error
+        return data
+      } catch (error) {
+        console.error('Error fetching shift:', error)
+        return null
+      }
+    },
+    []
+  )
+
+  // Get employee's shifts
+  const getEmployeeShifts = useCallback(
+    async (employeeId: string, filters?: { status?: Shift['status'] }) => {
+      try {
+        let query = supabase
+          .from('shifts')
+          .select('*')
+          .eq('employee_id', employeeId)
+
+        if (filters?.status) {
+          query = query.eq('status', filters.status)
+        }
+
+        const { data, error } = await query.order('start_time', {
+          ascending: true,
+        })
+
+        if (error) throw error
+        return data || []
+      } catch (error) {
+        console.error('Error fetching employee shifts:', error)
+        return []
+      }
+    },
+    []
+  )
+
+  // Create shift
+  const createShift = useCallback(
+    async (shiftData: CreateShiftRequest) => {
+      try {
+        if (!user) {
+          throw new Error('User not authenticated')
+        }
+
+        // Verify user owns the company
+        const { data: company, error: companyError } = await supabase
+          .from('companies')
+          .select('owner_id')
+          .eq('id', shiftData.company_id)
+          .single()
+
+        if (companyError || company?.owner_id !== user.id) {
+          throw new Error('Unauthorized: You do not own this company')
+        }
+
+        const { data, error } = await supabase
+          .from('shifts')
+          .insert(shiftData)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        setState((prev) => ({
+          ...prev,
+          shifts: [...prev.shifts, data],
+        }))
+
+        return { success: true, data }
+      } catch (error) {
+        const err = error as Error
+        return { success: false, error: err.message }
+      }
+    },
+    [user]
+  )
+
+  // Update shift
+  const updateShift = useCallback(
+    async (shiftId: string, updates: UpdateShiftRequest) => {
+      try {
+        if (!user) {
+          throw new Error('User not authenticated')
+        }
+
+        const { data, error } = await supabase
+          .from('shifts')
+          .update(updates)
+          .eq('id', shiftId)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        setState((prev) => ({
+          ...prev,
+          shifts: prev.shifts.map((shift) =>
+            shift.id === shiftId ? data : shift
+          ),
+          selectedShift:
+            prev.selectedShift?.id === shiftId ? data : prev.selectedShift,
+        }))
+
+        return { success: true, data }
+      } catch (error) {
+        const err = error as Error
+        return { success: false, error: err.message }
+      }
+    },
+    [user]
+  )
+
+  // Mark shift as in progress
+  const startShift = useCallback(
+    async (shiftId: string) => {
+      return updateShift(shiftId, { status: 'in_progress' })
+    },
+    [updateShift]
+  )
+
+  // Mark shift as completed
+  const completeShift = useCallback(
+    async (shiftId: string) => {
+      return updateShift(shiftId, { status: 'completed' })
+    },
+    [updateShift]
+  )
+
+  // Cancel shift
+  const cancelShift = useCallback(
+    async (shiftId: string, reason?: string) => {
+      return updateShift(shiftId, {
+        status: 'cancelled',
+        notes: reason,
       })
-      .select()
-      .single();
+    },
+    [updateShift]
+  )
 
-    if (error) {
-      return { error: error.message };
-    }
+  // Delete shift
+  const deleteShift = useCallback(
+    async (shiftId: string) => {
+      try {
+        if (!user) {
+          throw new Error('User not authenticated')
+        }
 
-    await fetchSchedules();
-    return { data };
-  };
+        const { error } = await supabase
+          .from('shifts')
+          .delete()
+          .eq('id', shiftId)
 
-  // Update schedule
-  const updateSchedule = async (id: string, updates: Partial<Schedule>) => {
-    if (!user) return { error: 'User not authenticated' };
+        if (error) throw error
 
-    const { data, error } = await supabase
-      .from('schedules')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+        setState((prev) => ({
+          ...prev,
+          shifts: prev.shifts.filter((shift) => shift.id !== shiftId),
+          selectedShift:
+            prev.selectedShift?.id === shiftId ? null : prev.selectedShift,
+        }))
 
-    if (error) {
-      return { error: error.message };
-    }
+        return { success: true }
+      } catch (error) {
+        const err = error as Error
+        return { success: false, error: err.message }
+      }
+    },
+    [user]
+  )
 
-    await fetchSchedules();
-    return { data };
-  };
+  // Select shift
+  const selectShift = useCallback((shift: Shift | null) => {
+    setState((prev) => ({
+      ...prev,
+      selectedShift: shift,
+    }))
+  }, [])
 
-  // Delete schedule
-  const deleteSchedule = async (id: string) => {
-    if (!user) return { error: 'User not authenticated' };
+  // Bulk create shifts (for recurring schedules)
+  const bulkCreateShifts = useCallback(
+    async (shiftsData: CreateShiftRequest[]) => {
+      try {
+        if (!user) {
+          throw new Error('User not authenticated')
+        }
 
-    const { error } = await supabase
-      .from('schedules')
-      .delete()
-      .eq('id', id);
+        const { data, error } = await supabase
+          .from('shifts')
+          .insert(shiftsData)
+          .select()
 
-    if (error) {
-      return { error: error.message };
-    }
+        if (error) throw error
 
-    await fetchSchedules();
-    return { success: true };
-  };
+        setState((prev) => ({
+          ...prev,
+          shifts: [...prev.shifts, ...(data || [])],
+        }))
 
+        return { success: true, data, count: (data || []).length }
+      } catch (error) {
+        const err = error as Error
+        return { success: false, error: err.message }
+      }
+    },
+    [user]
+  )
+
+  // Set up real-time subscription
   useEffect(() => {
-    if (user) {
-      fetchSchedules();
-      fetchEmployees();
-      setLoading(false);
+    if (companyId) {
+      fetchShifts(companyId)
 
-      // Set up real-time subscription
       const channel = supabase
-        .channel('schedules_changes')
+        .channel(`shifts_company_${companyId}`)
         .on(
           'postgres_changes',
           {
             event: '*',
             schema: 'public',
-            table: 'schedules'
+            table: 'shifts',
+            filter: `company_id=eq.${companyId}`,
           },
           () => {
-            fetchSchedules();
+            fetchShifts(companyId)
           }
         )
-        .subscribe();
+        .subscribe()
 
       return () => {
-        supabase.removeChannel(channel);
-      };
+        supabase.removeChannel(channel)
+      }
     }
-  }, [user]);
+  }, [companyId, fetchShifts])
 
   return {
-    schedules,
-    employees,
-    loading,
-    createSchedule,
-    updateSchedule,
-    deleteSchedule,
-    refetch: () => {
-      fetchSchedules();
-      fetchEmployees();
-    }
-  };
-};
+    ...state,
+    getShift,
+    getEmployeeShifts,
+    createShift,
+    updateShift,
+    startShift,
+    completeShift,
+    cancelShift,
+    deleteShift,
+    selectShift,
+    bulkCreateShifts,
+    refetch: () => fetchShifts(companyId),
+  }
+}

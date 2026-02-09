@@ -1,112 +1,293 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import type { Database } from '@/integrations/supabase/types';
+import { useState, useEffect, useCallback } from 'react'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
+import type {
+  Company,
+  CreateCompanyRequest,
+  UpdateCompanyRequest,
+} from '@/types'
 
-type Company = Database['public']['Tables']['companies']['Row'];
-type CompanyInsert = Database['public']['Tables']['companies']['Insert'];
-type CompanyUpdate = Database['public']['Tables']['companies']['Update'];
+export interface UseCompaniesState {
+  companies: Company[]
+  selectedCompany: Company | null
+  loading: boolean
+  error: Error | null
+}
 
 export const useCompanies = () => {
-  const { user } = useAuth();
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth()
+  const [state, setState] = useState<UseCompaniesState>({
+    companies: [],
+    selectedCompany: null,
+    loading: true,
+    error: null,
+  })
 
-  const fetchCompanies = async () => {
+  // Fetch companies (only those owned by user or user is employee in)
+  const fetchCompanies = useCallback(async () => {
+    if (!user) return
+
     try {
-      const { data, error } = await supabase
+      setState((prev) => ({ ...prev, loading: true, error: null }))
+
+      // Get companies where user is the owner
+      const { data: ownedCompanies, error: ownedError } = await supabase
         .from('companies')
         .select('*')
-        .order('name', { ascending: true });
+        .eq('owner_id', user.id)
+        .order('name', { ascending: true })
 
-      if (error) throw error;
-      setCompanies(data || []);
+      if (ownedError) throw ownedError
+
+      // Get companies where user is an employee
+      const { data: employeeCompanies, error: employeeError } = await supabase
+        .from('employees')
+        .select('company_id')
+        .eq('user_id', user.id)
+
+      if (employeeError && employeeError.code !== 'PGRST116')
+        throw employeeError
+
+      let companyIds: string[] = []
+      if (employeeCompanies && employeeCompanies.length > 0) {
+        companyIds = employeeCompanies.map((ec) => ec.company_id)
+      }
+
+      let employedInCompanies: Company[] = []
+      if (companyIds.length > 0) {
+        const { data: empData, error: empError } = await supabase
+          .from('companies')
+          .select('*')
+          .in('id', companyIds)
+          .order('name', { ascending: true })
+
+        if (empError) throw empError
+        employedInCompanies = empData || []
+      }
+
+      // Merge and deduplicate
+      const allCompanies = [
+        ...(ownedCompanies || []),
+        ...employedInCompanies,
+      ].filter(
+        (company, index, self) =>
+          index === self.findIndex((c) => c.id === company.id)
+      )
+
+      setState((prev) => ({
+        ...prev,
+        companies: allCompanies,
+        loading: false,
+      }))
+
+      return allCompanies
     } catch (error) {
-      console.error('Error fetching companies:', error);
-    } finally {
-      setLoading(false);
+      const err = error as Error
+      setState((prev) => ({
+        ...prev,
+        error: err,
+        loading: false,
+      }))
+      return []
     }
-  };
+  }, [user])
 
-  const createCompany = async (companyData: CompanyInsert) => {
-    try {
-      const { data, error } = await supabase
-        .from('companies')
-        .insert(companyData)
-        .select()
-        .single();
+  // Get single company
+  const getCompany = useCallback(
+    async (companyId: string): Promise<Company | null> => {
+      try {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('*')
+          .eq('id', companyId)
+          .single()
 
-      if (error) throw error;
-      await fetchCompanies();
-      return data;
-    } catch (error) {
-      console.error('Error creating company:', error);
-      throw error;
-    }
-  };
+        if (error) throw error
+        return data
+      } catch (error) {
+        console.error('Error fetching company:', error)
+        return null
+      }
+    },
+    []
+  )
 
-  const updateCompany = async (id: string, updates: CompanyUpdate) => {
-    try {
-      const { data, error } = await supabase
-        .from('companies')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+  // Create company
+  const createCompany = useCallback(
+    async (companyData: CreateCompanyRequest) => {
+      try {
+        if (!user) {
+          throw new Error('User not authenticated')
+        }
 
-      if (error) throw error;
-      await fetchCompanies();
-      return data;
-    } catch (error) {
-      console.error('Error updating company:', error);
-      throw error;
-    }
-  };
+        const { data, error } = await supabase
+          .from('companies')
+          .insert({
+            ...companyData,
+            owner_id: user.id,
+          })
+          .select()
+          .single()
 
-  const deleteCompany = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('companies')
-        .delete()
-        .eq('id', id);
+        if (error) throw error
 
-      if (error) throw error;
-      await fetchCompanies();
-    } catch (error) {
-      console.error('Error deleting company:', error);
-      throw error;
-    }
-  };
+        setState((prev) => ({
+          ...prev,
+          companies: [...prev.companies, data],
+        }))
 
+        return { success: true, data }
+      } catch (error) {
+        const err = error as Error
+        return { success: false, error: err.message }
+      }
+    },
+    [user]
+  )
+
+  // Update company (only if owner)
+  const updateCompany = useCallback(
+    async (companyId: string, updates: UpdateCompanyRequest) => {
+      try {
+        if (!user) {
+          throw new Error('User not authenticated')
+        }
+
+        // Verify user owns the company
+        const company = await getCompany(companyId)
+        if (!company || company.owner_id !== user.id) {
+          throw new Error('Unauthorized: You do not own this company')
+        }
+
+        const { data, error } = await supabase
+          .from('companies')
+          .update(updates)
+          .eq('id', companyId)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        setState((prev) => ({
+          ...prev,
+          companies: prev.companies.map((c) =>
+            c.id === companyId ? data : c
+          ),
+          selectedCompany:
+            prev.selectedCompany?.id === companyId
+              ? data
+              : prev.selectedCompany,
+        }))
+
+        return { success: true, data }
+      } catch (error) {
+        const err = error as Error
+        return { success: false, error: err.message }
+      }
+    },
+    [user, getCompany]
+  )
+
+  // Delete company (only if owner)
+  const deleteCompany = useCallback(
+    async (companyId: string) => {
+      try {
+        if (!user) {
+          throw new Error('User not authenticated')
+        }
+
+        // Verify user owns the company
+        const company = await getCompany(companyId)
+        if (!company || company.owner_id !== user.id) {
+          throw new Error('Unauthorized: You do not own this company')
+        }
+
+        const { error } = await supabase
+          .from('companies')
+          .delete()
+          .eq('id', companyId)
+
+        if (error) throw error
+
+        setState((prev) => ({
+          ...prev,
+          companies: prev.companies.filter((c) => c.id !== companyId),
+          selectedCompany:
+            prev.selectedCompany?.id === companyId
+              ? null
+              : prev.selectedCompany,
+        }))
+
+        return { success: true }
+      } catch (error) {
+        const err = error as Error
+        return { success: false, error: err.message }
+      }
+    },
+    [user, getCompany]
+  )
+
+  // Select company
+  const selectCompany = useCallback((company: Company | null) => {
+    setState((prev) => ({
+      ...prev,
+      selectedCompany: company,
+    }))
+  }, [])
+
+  // Set up real-time subscription
   useEffect(() => {
     if (user) {
-      fetchCompanies();
+      fetchCompanies()
 
-      const channel = supabase
-        .channel('companies_changes')
+      // Subscribe to owned companies changes
+      const channelOwned = supabase
+        .channel(`companies_owned_${user.id}`)
         .on(
           'postgres_changes',
           {
             event: '*',
             schema: 'public',
-            table: 'companies'
+            table: 'companies',
+            filter: `owner_id=eq.${user.id}`,
           },
-          () => fetchCompanies()
+          () => {
+            fetchCompanies()
+          }
         )
-        .subscribe();
+        .subscribe()
+
+      // Subscribe to employees table changes to detect new company associations
+      const channelEmployees = supabase
+        .channel(`employees_user_${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'employees',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            fetchCompanies()
+          }
+        )
+        .subscribe()
 
       return () => {
-        supabase.removeChannel(channel);
-      };
+        supabase.removeChannel(channelOwned)
+        supabase.removeChannel(channelEmployees)
+      }
     }
-  }, [user]);
+  }, [user, fetchCompanies])
 
   return {
-    companies,
-    loading,
+    ...state,
+    getCompany,
     createCompany,
     updateCompany,
     deleteCompany,
-    refetch: fetchCompanies
-  };
-};
+    selectCompany,
+    refetch: fetchCompanies,
+  }
+}
