@@ -1,23 +1,6 @@
-{
-  "name": "Time & Attendance App",
-  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "env": {
-    "VITE_SUPABASE_URL": {
-      "description": "Supabase project URL"
-    },
-    "VITE_SUPABASE_ANON_KEY": {
-      "description": "Supabase anonymous key for client-side operations"
-    },
-    "VITE_SUPABASE_PROJECT_ID": {
-      "description": "Supabase project ID"
-    },
-    "VITE_APP_ENV": {
-      "description": "Application environment (production, staging, development)"
-    }
-  },
   "routes": [
     {
       "src": "/(.*)",
