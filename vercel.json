@@ -71,8 +71,5 @@
       "source": "/api/(.*)",
       "destination": "https://oftdozvxmknzcowtfrto.supabase.co/rest/v1/$1"
     }
-  ],
-  "buildEnvironment": {
-    "NODE_VERSION": "18.x"
-  }
+  ]
 }
