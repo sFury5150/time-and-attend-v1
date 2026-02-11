@@ -65,7 +65,7 @@ const TimeClockWidget = () => {
       });
       return;
     }
-    const { error } = await clockIn(employeeId, location);
+    const { error } = await clockIn(employeeId, {});
     if (error) {
       toast({
         title: "Error",
@@ -81,7 +81,15 @@ const TimeClockWidget = () => {
   };
 
   const handleClockOut = async () => {
-    const { error } = await clockOut();
+    if (!currentEntry?.id) {
+      toast({
+        title: "Error",
+        description: "No active time entry to clock out from.",
+        variant: "destructive"
+      });
+      return;
+    }
+    const { error } = await clockOut(currentEntry.id, {});
     if (error) {
       toast({
         title: "Error",
