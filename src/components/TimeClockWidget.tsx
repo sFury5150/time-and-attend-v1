@@ -65,7 +65,7 @@ const TimeClockWidget = () => {
       });
       return;
     }
-    const { error } = await clockIn(employeeId, {});
+    const { error } = await clockIn(employeeId, { skipGeofenceValidation: true });
     if (error) {
       toast({
         title: "Error",
