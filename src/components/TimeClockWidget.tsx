@@ -65,17 +65,29 @@ const TimeClockWidget = () => {
       });
       return;
     }
-    const { error } = await clockIn(employeeId, { skipGeofenceValidation: true });
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-    } else {
+    try {
+      const { data, error } = await supabase
+        .from('time_entries')
+        .insert({
+          employee_id: employeeId,
+          clock_in_time: new Date().toISOString(),
+          status: 'active',
+          geofence_validated: false
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
       toast({
         title: "Clocked In",
         description: "You have successfully clocked in.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: (error as Error).message,
+        variant: "destructive"
       });
     }
   };
