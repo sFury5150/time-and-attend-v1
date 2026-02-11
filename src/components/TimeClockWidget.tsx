@@ -5,12 +5,30 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Play, Pause, Square, Coffee, MapPin } from 'lucide-react';
 import { useTimeTracking } from '@/hooks/useTimeTracking';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 const TimeClockWidget = () => {
   const { currentEntry, clockIn, clockOut, startBreak, endBreak } = useTimeTracking();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [location, setLocation] = useState<any>(null);
+
+  // Fetch employee linked to current user
+  useEffect(() => {
+    const fetchEmployeeId = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      if (data) setEmployeeId(data.id);
+    };
+    fetchEmployeeId();
+  }, [user]);
 
   // Update current time every second
   useEffect(() => {
@@ -39,7 +57,15 @@ const TimeClockWidget = () => {
   }, []);
 
   const handleClockIn = async () => {
-    const { error } = await clockIn(location);
+    if (!employeeId) {
+      toast({
+        title: "Error",
+        description: "No employee record found for your user.",
+        variant: "destructive"
+      });
+      return;
+    }
+    const { error } = await clockIn(employeeId, location);
     if (error) {
       toast({
         title: "Error",
