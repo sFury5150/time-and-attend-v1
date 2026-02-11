@@ -69,7 +69,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://oftdozvxmknzcowtfrto.supabase.co/rest/v1/$1"
+      "destination": "https://cjpyypjmtjghtspvmjld.supabase.co/rest/v1/$1"
     }
   ],
   "buildEnvironment": {
