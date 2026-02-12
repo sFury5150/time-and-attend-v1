@@ -17,18 +17,18 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   const [userRole, setUserRole] = useState<string>('employee');
 
-  // Fetch user role
+  // Fetch user role from user_roles table
   useEffect(() => {
     if (user) {
-      const fetchProfile = async () => {
+      const fetchRole = async () => {
         const {
           data
-        } = await supabase.from('profiles').select('role').eq('user_id', user.id).single();
-        if (data?.role) {
-          setUserRole(data.role);
+        } = await supabase.from('user_roles').select('role_id').eq('user_id', user.id).limit(1).maybeSingle();
+        if (data?.role_id) {
+          setUserRole(data.role_id);
         }
       };
-      fetchProfile();
+      fetchRole();
     }
   }, [user]);
   const isManager = ['manager', 'supervisor', 'admin'].includes(userRole);
