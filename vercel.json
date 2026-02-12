@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "Time & Attendance App",
   "version": 2,
   "buildCommand": "npm run build",
@@ -75,4 +76,11 @@
   "buildEnvironment": {
     "NODE_VERSION": "18.x"
   }
+=======
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+>>>>>>> 4508deae0dcf08954e3042b19b95639bb0c21498
 }
