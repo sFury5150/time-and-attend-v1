@@ -20,27 +20,35 @@ const TimeClockWidget = () => {
   // Get employee ID for logged-in user
   useEffect(() => {
     const fetchEmployeeId = async () => {
-      if (!user) {
+      if (!user || !user.id) {
         setLoading(false);
         return;
       }
 
       try {
+        console.log('Fetching employee for user:', user.id);
         const { data, error } = await supabase
           .from('employees')
           .select('id, company_id')
-          .eq('user_id', user.id)
-          .limit(1)
-          .single();
+          .eq('user_id', user.id);
 
-        if (error) throw error;
-        setEmployeeId(data.id);
-        setCompanyId(data.company_id);
+        if (error) {
+          console.error('Query error:', error);
+          throw error;
+        }
+
+        if (!data || data.length === 0) {
+          throw new Error('No employee record found for this user');
+        }
+
+        console.log('Employee found:', data[0]);
+        setEmployeeId(data[0].id);
+        setCompanyId(data[0].company_id);
       } catch (error) {
         console.error('Error fetching employee ID:', error);
         toast({
           title: 'Error',
-          description: 'Could not load employee information',
+          description: `Could not load employee: ${(error as Error).message}`,
           variant: 'destructive'
         });
       } finally {
