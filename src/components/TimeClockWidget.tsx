@@ -17,6 +17,11 @@ const TimeClockWidget = () => {
   const [loading, setLoading] = useState(true);
   const { currentEntry, clockIn, clockOut, startBreak, endBreak } = useTimeTracking(companyId);
 
+  // Debug: log user on mount
+  useEffect(() => {
+    console.log('TimeClockWidget mounted. User:', user);
+  }, [user]);
+
   // Get employee ID for logged-in user
   useEffect(() => {
     const fetchEmployeeId = async () => {
