@@ -166,6 +166,8 @@ const TimeClockWidget = () => {
     }
   };
 
+  console.log('State check - employeeId:', employeeId, 'loading:', loading, 'currentEntry:', currentEntry);
+
   const getWorkingTime = () => {
     if (!currentEntry || !currentEntry.clock_in) return '00:00:00';
     
