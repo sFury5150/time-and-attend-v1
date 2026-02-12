@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const TimeClockWidget = () => {
+  console.log('🦊 TimeClockWidget rendering');
+  
   const { user } = useAuth();
   const { toast } = useToast();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -17,10 +19,7 @@ const TimeClockWidget = () => {
   const [loading, setLoading] = useState(true);
   const { currentEntry, clockIn, clockOut, startBreak, endBreak } = useTimeTracking(companyId);
 
-  // Debug: log user on mount
-  useEffect(() => {
-    console.log('TimeClockWidget mounted. User:', user);
-  }, [user]);
+  console.log('🦊 User loaded:', user?.id);
 
   // Get employee ID for logged-in user
   useEffect(() => {
