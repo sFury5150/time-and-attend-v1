@@ -4,13 +4,50 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Clock, Play, Pause, Square, Coffee, MapPin } from 'lucide-react';
 import { useTimeTracking } from '@/hooks/useTimeTracking';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const TimeClockWidget = () => {
   const { currentEntry, clockIn, clockOut, startBreak, endBreak } = useTimeTracking();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [location, setLocation] = useState<any>(null);
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Get employee ID for logged-in user
+  useEffect(() => {
+    const fetchEmployeeId = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('employees')
+          .select('id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .single();
+
+        if (error) throw error;
+        setEmployeeId(data.id);
+      } catch (error) {
+        console.error('Error fetching employee ID:', error);
+        toast({
+          title: 'Error',
+          description: 'Could not load employee information',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployeeId();
+  }, [user, toast]);
 
   // Update current time every second
   useEffect(() => {
@@ -20,26 +57,17 @@ const TimeClockWidget = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Get location if supported
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            timestamp: new Date().toISOString()
-          });
-        },
-        (error) => {
-          console.warn('Location access denied:', error);
-        }
-      );
-    }
-  }, []);
-
   const handleClockIn = async () => {
-    const { error } = await clockIn(location);
+    if (!employeeId) {
+      toast({
+        title: "Error",
+        description: "Employee information not loaded",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const { error } = await clockIn(employeeId, { skipGeofenceValidation: true });
     if (error) {
       toast({
         title: "Error",
@@ -55,7 +83,16 @@ const TimeClockWidget = () => {
   };
 
   const handleClockOut = async () => {
-    const { error } = await clockOut();
+    if (!currentEntry) {
+      toast({
+        title: "Error",
+        description: "No active time entry",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const { error } = await clockOut(currentEntry.id, { skipGeofenceValidation: true });
     if (error) {
       toast({
         title: "Error",
@@ -176,18 +213,16 @@ const TimeClockWidget = () => {
           </div>
         )}
 
-        {location && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <MapPin className="w-3 h-3" />
-            <span>Location tracking enabled</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <MapPin className="w-3 h-3" />
+          <span>Location tracking via browser</span>
+        </div>
 
         <div className="space-y-2">
           {!currentEntry ? (
-            <Button onClick={handleClockIn} className="w-full" size="lg">
+            <Button onClick={handleClockIn} className="w-full" size="lg" disabled={loading || !employeeId}>
               <Play className="w-4 h-4 mr-2" />
-              Clock In
+              {loading ? 'Loading...' : 'Clock In'}
             </Button>
           ) : (
             <div className="space-y-2">
