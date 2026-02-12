@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const TimeClockWidget = () => {
-  console.log('🦊 TimeClockWidget rendering');
+  console.log('TimeClockWidget rendering');
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -19,49 +19,47 @@ const TimeClockWidget = () => {
   const [loading, setLoading] = useState(true);
   const { currentEntry, clockIn, clockOut, startBreak, endBreak } = useTimeTracking(companyId);
 
-  console.log('🦊 User loaded:', user?.id);
+  console.log('User loaded:', user?.id);
 
   // Get employee ID for logged-in user
   useEffect(() => {
-    const fetchEmployeeId = async () => {
-      if (!user || !user.id) {
-        setLoading(false);
-        return;
-      }
+    if (!user || !user.id) {
+      console.log('No user, skipping employee fetch');
+      setLoading(false);
+      return;
+    }
 
+    console.log('Starting employee fetch for:', user.id);
+    
+    const fetchEmployeeId = async () => {
       try {
-        console.log('Fetching employee for user:', user.id);
         const { data, error } = await supabase
           .from('employees')
           .select('id, company_id')
           .eq('user_id', user.id);
 
         if (error) {
-          console.error('Query error:', error);
+          console.error('Database error:', error);
           throw error;
         }
 
         if (!data || data.length === 0) {
+          console.error('No employee found');
           throw new Error('No employee record found for this user');
         }
 
-        console.log('Employee found:', data[0]);
+        console.log('Success - employee found:', data[0].id);
         setEmployeeId(data[0].id);
         setCompanyId(data[0].company_id);
       } catch (error) {
-        console.error('Error fetching employee ID:', error);
-        toast({
-          title: 'Error',
-          description: `Could not load employee: ${(error as Error).message}`,
-          variant: 'destructive'
-        });
+        console.error('Fetch failed:', error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchEmployeeId();
-  }, [user, toast]);
+  }, [user?.id]);
 
   // Update current time every second
   useEffect(() => {

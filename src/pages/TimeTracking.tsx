@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Clock, BarChart3, History } from 'lucide-react';
 
 const TimeTracking = () => {
-  console.log('🦊 TimeTracking page loaded');
+  console.log('TimeTracking page loaded');
   
   return (
     <DashboardLayout>
