@@ -9,12 +9,13 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const TimeClockWidget = () => {
-  const { currentEntry, clockIn, clockOut, startBreak, endBreak } = useTimeTracking();
   const { user } = useAuth();
   const { toast } = useToast();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { currentEntry, clockIn, clockOut, startBreak, endBreak } = useTimeTracking(companyId);
 
   // Get employee ID for logged-in user
   useEffect(() => {
@@ -27,13 +28,14 @@ const TimeClockWidget = () => {
       try {
         const { data, error } = await supabase
           .from('employees')
-          .select('id')
+          .select('id, company_id')
           .eq('user_id', user.id)
           .limit(1)
           .single();
 
         if (error) throw error;
         setEmployeeId(data.id);
+        setCompanyId(data.company_id);
       } catch (error) {
         console.error('Error fetching employee ID:', error);
         toast({
