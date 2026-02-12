@@ -24,10 +24,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import EmployeeMobileApp from "./pages/EmployeeMobileApp";
 import ManagerDashboard from "./pages/ManagerDashboard";
-<<<<<<< HEAD
 import RouteTest from "./pages/RouteTest";
-=======
->>>>>>> 4508deae0dcf08954e3042b19b95639bb0c21498
 
 const queryClient = new QueryClient();
 
