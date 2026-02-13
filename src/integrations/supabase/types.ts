@@ -430,51 +430,78 @@ export type Database = {
       }
       time_entries: {
         Row: {
-          break_duration: number | null
-          break_end: string | null
-          break_start: string | null
-          clock_in: string
-          clock_out: string | null
-          created_at: string
           id: string
-          location_data: Json | null
-          notes: string | null
+          employee_id: string
+          shift_id: string | null
+          clock_in_time: string
+          clock_in_lat: number | null
+          clock_in_lng: number | null
+          clock_out_time: string | null
+          clock_out_lat: number | null
+          clock_out_lng: number | null
           status: string
+          geofence_validated: boolean | null
+          geofence_error: string | null
           total_hours: number | null
+          break_minutes: number | null
+          notes: string | null
+          created_at: string
           updated_at: string
-          user_id: string
         }
         Insert: {
-          break_duration?: number | null
-          break_end?: string | null
-          break_start?: string | null
-          clock_in?: string
-          clock_out?: string | null
-          created_at?: string
           id?: string
-          location_data?: Json | null
-          notes?: string | null
+          employee_id: string
+          shift_id?: string | null
+          clock_in_time: string
+          clock_in_lat?: number | null
+          clock_in_lng?: number | null
+          clock_out_time?: string | null
+          clock_out_lat?: number | null
+          clock_out_lng?: number | null
           status?: string
+          geofence_validated?: boolean | null
+          geofence_error?: string | null
           total_hours?: number | null
+          break_minutes?: number | null
+          notes?: string | null
+          created_at?: string
           updated_at?: string
-          user_id: string
         }
         Update: {
-          break_duration?: number | null
-          break_end?: string | null
-          break_start?: string | null
-          clock_in?: string
-          clock_out?: string | null
-          created_at?: string
           id?: string
-          location_data?: Json | null
-          notes?: string | null
+          employee_id?: string
+          shift_id?: string | null
+          clock_in_time?: string
+          clock_in_lat?: number | null
+          clock_in_lng?: number | null
+          clock_out_time?: string | null
+          clock_out_lat?: number | null
+          clock_out_lng?: number | null
           status?: string
+          geofence_validated?: boolean | null
+          geofence_error?: string | null
           total_hours?: number | null
+          break_minutes?: number | null
+          notes?: string | null
+          created_at?: string
           updated_at?: string
-          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {
