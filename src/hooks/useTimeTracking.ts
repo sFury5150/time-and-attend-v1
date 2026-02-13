@@ -246,15 +246,10 @@ export const useTimeTracking = (companyId?: string) => {
         const { data, error } = await supabase
           .from('time_entries')
           .update({
-            clock_out_time: clockOutTime,
-            clock_out_lat: coordinates.latitude,
-            clock_out_lng: coordinates.longitude,
+            clock_out: clockOutTime,
             status: 'clocked_out',
-            break_minutes: breakMinutes,
+            break_duration: breakMinutes,
             total_hours: Math.round(totalHours * 100) / 100,
-            geofence_validated:
-              !options.skipGeofenceValidation || currentEntry.geofence_validated,
-            notes: options.notes || currentEntry.notes,
           })
           .eq('id', timeEntryId)
           .select()
