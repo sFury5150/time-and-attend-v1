@@ -122,41 +122,18 @@ export const useTimeTracking = (companyId?: string) => {
           throw new Error('User not authenticated')
         }
 
-        // Get user's current location
-        let coordinates: GeolocationCoordinates
-        try {
-          coordinates = await getLocation()
-        } catch (error) {
-          throw new Error(
-            `Failed to get location: ${(error as Error).message}`
-          )
-        }
-
-        // Validate geofence if shift is provided
-        if (options.shift_id && !options.skipGeofenceValidation) {
+        // Get user's current location (optional)
+        let lat: number | null = null
+        let lng: number | null = null
+        
+        if (!options.skipGeofenceValidation) {
           try {
-            const shift = await supabase
-              .from('shifts')
-              .select('location_id')
-              .eq('id', options.shift_id)
-              .single()
-
-            if (shift.data) {
-              const validation = await validateGeofence(
-                shift.data.location_id,
-                coordinates
-              )
-
-              if (!validation.isValid) {
-                throw new Error(
-                  validation.error ||
-                    'User is outside geofence for this location'
-                )
-              }
-            }
+            const coordinates = await getLocation()
+            lat = coordinates.latitude
+            lng = coordinates.longitude
           } catch (error) {
-            const err = error as Error
-            throw new Error(`Geofence validation failed: ${err.message}`)
+            console.warn('Failed to get location, continuing without it:', error)
+            // Don't fail if geolocation is unavailable
           }
         }
 
@@ -167,10 +144,10 @@ export const useTimeTracking = (companyId?: string) => {
             employee_id: employeeId,
             shift_id: options.shift_id || null,
             clock_in_time: new Date().toISOString(),
-            clock_in_lat: coordinates.latitude,
-            clock_in_lng: coordinates.longitude,
+            clock_in_lat: lat,
+            clock_in_lng: lng,
             status: 'active',
-            geofence_validated: !options.skipGeofenceValidation,
+            geofence_validated: false,
           })
           .select()
           .single()
@@ -194,7 +171,7 @@ export const useTimeTracking = (companyId?: string) => {
         return { success: false, error: err.message }
       }
     },
-    [user, getLocation, validateGeofence, fetchRecentEntries]
+    [user, getLocation, fetchRecentEntries]
   )
 
   // Clock out
