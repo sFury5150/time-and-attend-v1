@@ -338,10 +338,42 @@ export const useTimeTracking = (companyId?: string) => {
     }
   }, [user, fetchCurrentEntry, fetchRecentEntries])
 
+  // Start break
+  const startBreak = useCallback(async () => {
+    try {
+      if (!state.currentEntry) {
+        throw new Error('No active time entry')
+      }
+
+      // Break functionality requires break_start/break_end columns in database
+      return { success: false, error: 'Break functionality not yet implemented' }
+    } catch (error) {
+      const err = error as Error
+      return { success: false, error: err.message }
+    }
+  }, [state.currentEntry])
+
+  // End break
+  const endBreak = useCallback(async () => {
+    try {
+      if (!state.currentEntry) {
+        throw new Error('No active time entry')
+      }
+
+      // Break functionality requires break_start/break_end columns in database
+      return { success: false, error: 'Break functionality not yet implemented' }
+    } catch (error) {
+      const err = error as Error
+      return { success: false, error: err.message }
+    }
+  }, [state.currentEntry])
+
   return {
     ...state,
     clockIn,
     clockOut,
+    startBreak,
+    endBreak,
     getEntryDetails,
     refetch: () => {
       fetchCurrentEntry()
