@@ -1,13 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
-import { useGeolocation } from '@/hooks/useGeolocation'
-import { useLocations } from '@/hooks/useLocations'
 import type {
   TimeEntry,
   ClockInRequest,
   ClockOutRequest,
-  GeolocationCoordinates,
 } from '@/types'
 
 export interface UseTimeTrackingState {
@@ -31,8 +28,6 @@ export interface ClockOutOptions {
 
 export const useTimeTracking = (companyId?: string) => {
   const { user } = useAuth()
-  const { getLocation } = useGeolocation()
-  const { validateGeofence } = useLocations(companyId)
 
   const [state, setState] = useState<UseTimeTrackingState>({
     currentEntry: null,
@@ -40,6 +35,8 @@ export const useTimeTracking = (companyId?: string) => {
     loading: true,
     error: null,
   })
+
+  const [pausePollingUntil, setPausePollingUntil] = useState<number>(0)
 
   // Get current active time entry
   const fetchCurrentEntry = useCallback(async (employeeId?: string) => {
@@ -177,16 +174,6 @@ export const useTimeTracking = (companyId?: string) => {
           throw new Error('No active time entry')
         }
 
-        // Get user's current location
-        let coordinates: GeolocationCoordinates
-        try {
-          coordinates = await getLocation()
-        } catch (error) {
-          throw new Error(
-            `Failed to get location: ${(error as Error).message}`
-          )
-        }
-
         // Get current entry to validate
         const { data: currentEntry } = await supabase
           .from('time_entries')
@@ -211,8 +198,8 @@ export const useTimeTracking = (companyId?: string) => {
           .from('time_entries')
           .update({
             clock_out_time: clockOutTime,
-            clock_out_lat: coordinates.latitude,
-            clock_out_lng: coordinates.longitude,
+            clock_out_lat: null,
+            clock_out_lng: null,
             status: 'clocked_out',
             total_hours: Math.round(totalHours * 100) / 100,
           })
@@ -227,6 +214,9 @@ export const useTimeTracking = (companyId?: string) => {
           currentEntry: null,
         }))
 
+        // Pause polling for 15 seconds to avoid race condition with DB update
+        setPausePollingUntil(Date.now() + 15000)
+
         await fetchRecentEntries(currentEntry.employee_id)
 
         return { success: true, data }
@@ -239,7 +229,7 @@ export const useTimeTracking = (companyId?: string) => {
         return { success: false, error: err.message }
       }
     },
-    [user, getLocation, fetchRecentEntries]
+    [user, fetchRecentEntries]
   )
 
   // Get entry details
@@ -285,7 +275,7 @@ export const useTimeTracking = (companyId?: string) => {
 
           // Poll for updates every 10 seconds (increased interval to avoid thrashing)
           pollInterval = setInterval(() => {
-            if (isMounted) {
+            if (isMounted && Date.now() >= pausePollingUntil) {
               fetchCurrentEntry(employeeId)
               fetchRecentEntries(employeeId)
             }
@@ -300,7 +290,7 @@ export const useTimeTracking = (companyId?: string) => {
       isMounted = false
       if (pollInterval) clearInterval(pollInterval)
     }
-  }, [user, fetchCurrentEntry, fetchRecentEntries])
+  }, [user, fetchCurrentEntry, fetchRecentEntries, pausePollingUntil])
 
   // Start break
   const startBreak = useCallback(async () => {
@@ -325,6 +315,9 @@ export const useTimeTracking = (companyId?: string) => {
         ...prev,
         currentEntry: data,
       }))
+
+      // Pause polling to avoid race condition
+      setPausePollingUntil(Date.now() + 2000)
 
       return { success: true, data }
     } catch (error) {
