@@ -171,7 +171,6 @@ export const useTimeTracking = (companyId?: string) => {
             clock_in_lng: coordinates.longitude,
             status: 'active',
             geofence_validated: !options.skipGeofenceValidation,
-            notes: options.notes,
           })
           .select()
           .single()
@@ -250,7 +249,6 @@ export const useTimeTracking = (companyId?: string) => {
             clock_out_lat: coordinates.latitude,
             clock_out_lng: coordinates.longitude,
             status: 'clocked_out',
-            break_minutes: breakMinutes,
             total_hours: Math.round(totalHours * 100) / 100,
           })
           .eq('id', timeEntryId)
