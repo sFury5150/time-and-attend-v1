@@ -1,10 +1,31 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Calendar, TrendingUp } from 'lucide-react';
-import { useTimeTracking, TimeEntry } from '@/hooks/useTimeTracking';
+import { useTimeTracking } from '@/hooks/useTimeTracking';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 const TimeEntryHistory = () => {
-  const { timeEntries, loading } = useTimeTracking();
+  const { user } = useAuth();
+  const { recentEntries: timeEntries, loading } = useTimeTracking();
+  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  // Get employee's company for context
+  useEffect(() => {
+    if (user?.id) {
+      supabase
+        .from('employees')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setCompanyId(data[0].company_id);
+          }
+        });
+    }
+  }, [user?.id]);
 
   const formatDuration = (hours: number | null) => {
     if (!hours) return 'N/A';
@@ -24,9 +45,9 @@ const TimeEntryHistory = () => {
     });
   };
 
-  const getStatusBadge = (status: TimeEntry['status']) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'clocked_in':
+      case 'active':
         return <Badge className="bg-green-500">Active</Badge>;
       case 'on_break':
         return <Badge className="bg-yellow-500">On Break</Badge>;
@@ -42,7 +63,7 @@ const TimeEntryHistory = () => {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     
     return timeEntries
-      .filter(entry => new Date(entry.created_at) >= oneWeekAgo)
+      .filter(entry => new Date(entry.clock_in_time) >= oneWeekAgo)
       .reduce((total, entry) => total + (entry.total_hours || 0), 0);
   };
 
@@ -107,18 +128,18 @@ const TimeEntryHistory = () => {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{formatDate(entry.clock_in)}</span>
+                      <span className="font-medium">{formatDate(entry.clock_in_time)}</span>
                       {getStatusBadge(entry.status)}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      <span>In: {formatTime(entry.clock_in)}</span>
-                      {entry.clock_out && (
-                        <span> • Out: {formatTime(entry.clock_out)}</span>
+                      <span>In: {formatTime(entry.clock_in_time)}</span>
+                      {entry.clock_out_time && (
+                        <span> • Out: {formatTime(entry.clock_out_time)}</span>
                       )}
                     </div>
                     {entry.break_start && entry.break_end && (
                       <div className="text-xs text-muted-foreground">
-                        Break: {formatDuration(entry.break_duration)}
+                        Break: {formatTime(entry.break_start)} - {formatTime(entry.break_end)}
                       </div>
                     )}
                   </div>
@@ -126,7 +147,7 @@ const TimeEntryHistory = () => {
                     <div className="font-semibold">
                       {formatDuration(entry.total_hours)}
                     </div>
-                    {entry.status === 'clocked_in' && (
+                    {entry.status === 'active' && (
                       <div className="text-xs text-green-600">In Progress</div>
                     )}
                   </div>
