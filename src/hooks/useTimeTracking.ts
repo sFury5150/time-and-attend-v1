@@ -354,6 +354,9 @@ export const useTimeTracking = (companyId?: string) => {
         currentEntry: data,
       }))
 
+      // Pause polling to avoid race condition
+      setPausePollingUntil(Date.now() + 2000)
+
       return { success: true, data }
     } catch (error) {
       const err = error as Error
