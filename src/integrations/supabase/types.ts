@@ -452,7 +452,7 @@ export type Database = {
           id?: string
           employee_id: string
           shift_id?: string | null
-          clock_in_time: string
+          clock_in_time?: string
           clock_in_lat?: number | null
           clock_in_lng?: number | null
           clock_out_time?: string | null

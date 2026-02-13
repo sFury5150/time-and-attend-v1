@@ -246,9 +246,11 @@ export const useTimeTracking = (companyId?: string) => {
         const { data, error } = await supabase
           .from('time_entries')
           .update({
-            clock_out: clockOutTime,
+            clock_out_time: clockOutTime,
+            clock_out_lat: coordinates.latitude,
+            clock_out_lng: coordinates.longitude,
             status: 'clocked_out',
-            break_duration: breakMinutes,
+            break_minutes: breakMinutes,
             total_hours: Math.round(totalHours * 100) / 100,
           })
           .eq('id', timeEntryId)
