@@ -122,30 +122,15 @@ export const useTimeTracking = (companyId?: string) => {
           throw new Error('User not authenticated')
         }
 
-        // Get user's current location (optional)
-        let lat: number | null = null
-        let lng: number | null = null
-        
-        if (!options.skipGeofenceValidation) {
-          try {
-            const coordinates = await getLocation()
-            lat = coordinates.latitude
-            lng = coordinates.longitude
-          } catch (error) {
-            console.warn('Failed to get location, continuing without it:', error)
-            // Don't fail if geolocation is unavailable
-          }
-        }
-
-        // Create time entry
+        // Create time entry (geolocation disabled for now)
         const { data, error } = await supabase
           .from('time_entries')
           .insert({
             employee_id: employeeId,
             shift_id: options.shift_id || null,
             clock_in_time: new Date().toISOString(),
-            clock_in_lat: lat,
-            clock_in_lng: lng,
+            clock_in_lat: null,
+            clock_in_lng: null,
             status: 'active',
             geofence_validated: false,
           })
@@ -159,7 +144,10 @@ export const useTimeTracking = (companyId?: string) => {
           currentEntry: data,
         }))
 
-        await fetchRecentEntries(employeeId)
+        // Fetch recent entries after a brief delay to ensure DB is updated
+        setTimeout(() => {
+          fetchRecentEntries(employeeId)
+        }, 100)
 
         return { success: true, data }
       } catch (error) {
@@ -171,7 +159,7 @@ export const useTimeTracking = (companyId?: string) => {
         return { success: false, error: err.message }
       }
     },
-    [user, getLocation, fetchRecentEntries]
+    [user, fetchRecentEntries]
   )
 
   // Clock out
