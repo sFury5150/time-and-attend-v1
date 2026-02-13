@@ -297,7 +297,7 @@ export const useTimeTracking = (companyId?: string) => {
     []
   )
 
-  // Set up real-time subscription
+  // Set up polling (fallback instead of real-time subscription which can hang)
   useEffect(() => {
     if (user) {
       // Get current employee ID from user's profile
@@ -309,31 +309,24 @@ export const useTimeTracking = (companyId?: string) => {
         .then(({ data }) => {
           if (data && data.length > 0) {
             const employeeId = data[0].id
+            
+            // Initial fetch
             fetchCurrentEntry(employeeId)
             fetchRecentEntries(employeeId)
 
-            // Set up real-time subscription
-            const channel = supabase
-              .channel(`time_entries_employee_${employeeId}`)
-              .on(
-                'postgres_changes',
-                {
-                  event: '*',
-                  schema: 'public',
-                  table: 'time_entries',
-                  filter: `employee_id=eq.${employeeId}`,
-                },
-                () => {
-                  fetchCurrentEntry(employeeId)
-                  fetchRecentEntries(employeeId)
-                }
-              )
-              .subscribe()
+            // Poll for updates every 5 seconds
+            const pollInterval = setInterval(() => {
+              fetchCurrentEntry(employeeId)
+              fetchRecentEntries(employeeId)
+            }, 5000)
 
             return () => {
-              supabase.removeChannel(channel)
+              clearInterval(pollInterval)
             }
           }
+        })
+        .catch((error) => {
+          console.error('Error fetching employee ID:', error)
         })
     }
   }, [user, fetchCurrentEntry, fetchRecentEntries])
