@@ -273,13 +273,13 @@ export const useTimeTracking = (companyId?: string) => {
           fetchCurrentEntry(employeeId)
           fetchRecentEntries(employeeId)
 
-          // Poll for updates every 10 seconds (increased interval to avoid thrashing)
-          pollInterval = setInterval(() => {
-            if (isMounted && Date.now() >= pausePollingUntil) {
-              fetchCurrentEntry(employeeId)
-              fetchRecentEntries(employeeId)
-            }
-          }, 10000)
+          // TODO: Polling temporarily disabled to debug infinite render loop
+          // pollInterval = setInterval(() => {
+          //   if (isMounted && Date.now() >= pausePollingUntil) {
+          //     fetchCurrentEntry(employeeId)
+          //     fetchRecentEntries(employeeId)
+          //   }
+          // }, 10000)
         }
       })
       .catch((error) => {
