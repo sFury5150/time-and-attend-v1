@@ -157,7 +157,7 @@ const TimeClockWidget = () => {
     }
     
     switch (currentEntry.status) {
-      case 'clocked_in':
+      case 'active':
         return <Badge className="bg-green-500">Clocked In</Badge>;
       case 'on_break':
         return <Badge className="bg-yellow-500">On Break</Badge>;
@@ -169,9 +169,9 @@ const TimeClockWidget = () => {
   console.log('State check - employeeId:', employeeId, 'loading:', loading, 'currentEntry:', currentEntry);
 
   const getWorkingTime = () => {
-    if (!currentEntry || !currentEntry.clock_in) return '00:00:00';
+    if (!currentEntry || !currentEntry.clock_in_time) return '00:00:00';
     
-    const clockInTime = new Date(currentEntry.clock_in);
+    const clockInTime = new Date(currentEntry.clock_in_time);
     const now = new Date();
     let totalMs = now.getTime() - clockInTime.getTime();
     
@@ -215,7 +215,7 @@ const TimeClockWidget = () => {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Clock In:</span>
               <span className="text-sm font-mono">
-                {new Date(currentEntry.clock_in).toLocaleTimeString()}
+                {new Date(currentEntry.clock_in_time).toLocaleTimeString()}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -240,7 +240,7 @@ const TimeClockWidget = () => {
             </Button>
           ) : (
             <div className="space-y-2">
-              {currentEntry.status === 'clocked_in' && (
+              {currentEntry.status === 'active' && (
                 <>
                   <Button onClick={handleStartBreak} variant="outline" className="w-full">
                     <Coffee className="w-4 h-4 mr-2" />
