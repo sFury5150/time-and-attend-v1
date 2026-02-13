@@ -68,16 +68,17 @@ export async function initializeNotifications(): Promise<boolean> {
     }
 
     // Register service worker for handling notifications
-    try {
-      serviceWorkerRegistration = await navigator.serviceWorker.register(
-        '/service-worker.js',
-        { scope: '/' }
-      );
-      console.log('Service Worker registered for notifications');
-    } catch (error) {
-      console.log('Service Worker registration failed:', error);
-      // Notifications can still work without service worker (limited functionality)
-    }
+    // DISABLED: Service worker causes caching issues and auth state confusion
+    // try {
+    //   serviceWorkerRegistration = await navigator.serviceWorker.register(
+    //     '/service-worker.js',
+    //     { scope: '/' }
+    //   );
+    //   console.log('Service Worker registered for notifications');
+    // } catch (error) {
+    //   console.log('Service Worker registration failed:', error);
+    //   // Notifications can still work without service worker (limited functionality)
+    // }
 
     return true;
   } catch (error) {
