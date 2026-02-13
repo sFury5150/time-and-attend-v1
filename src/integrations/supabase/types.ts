@@ -443,6 +443,8 @@ export type Database = {
           geofence_validated: boolean | null
           geofence_error: string | null
           total_hours: number | null
+          break_start: string | null
+          break_end: string | null
           created_at: string
         }
         Insert: {
@@ -459,6 +461,8 @@ export type Database = {
           geofence_validated?: boolean | null
           geofence_error?: string | null
           total_hours?: number | null
+          break_start?: string | null
+          break_end?: string | null
           created_at?: string
         }
         Update: {
@@ -475,6 +479,8 @@ export type Database = {
           geofence_validated?: boolean | null
           geofence_error?: string | null
           total_hours?: number | null
+          break_start?: string | null
+          break_end?: string | null
           created_at?: string
         }
         Relationships: [

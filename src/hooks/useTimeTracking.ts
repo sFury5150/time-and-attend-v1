@@ -345,10 +345,30 @@ export const useTimeTracking = (companyId?: string) => {
         throw new Error('No active time entry')
       }
 
-      // Break functionality requires break_start/break_end columns in database
-      return { success: false, error: 'Break functionality not yet implemented' }
+      const { data, error } = await supabase
+        .from('time_entries')
+        .update({
+          status: 'on_break',
+          break_start: new Date().toISOString(),
+        })
+        .eq('id', state.currentEntry.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setState((prev) => ({
+        ...prev,
+        currentEntry: data,
+      }))
+
+      return { success: true, data }
     } catch (error) {
       const err = error as Error
+      setState((prev) => ({
+        ...prev,
+        error: err,
+      }))
       return { success: false, error: err.message }
     }
   }, [state.currentEntry])
@@ -360,10 +380,30 @@ export const useTimeTracking = (companyId?: string) => {
         throw new Error('No active time entry')
       }
 
-      // Break functionality requires break_start/break_end columns in database
-      return { success: false, error: 'Break functionality not yet implemented' }
+      const { data, error } = await supabase
+        .from('time_entries')
+        .update({
+          status: 'active',
+          break_end: new Date().toISOString(),
+        })
+        .eq('id', state.currentEntry.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setState((prev) => ({
+        ...prev,
+        currentEntry: data,
+      }))
+
+      return { success: true, data }
     } catch (error) {
       const err = error as Error
+      setState((prev) => ({
+        ...prev,
+        error: err,
+      }))
       return { success: false, error: err.message }
     }
   }, [state.currentEntry])
