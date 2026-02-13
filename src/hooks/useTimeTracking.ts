@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import type {
@@ -36,7 +36,7 @@ export const useTimeTracking = (companyId?: string) => {
     error: null,
   })
 
-  const [pausePollingUntil, setPausePollingUntil] = useState<number>(0)
+  const pausePollingUntilRef = useRef<number>(0)
 
   // Get current active time entry
   const fetchCurrentEntry = useCallback(async (employeeId?: string) => {
@@ -215,7 +215,7 @@ export const useTimeTracking = (companyId?: string) => {
         }))
 
         // Pause polling for 15 seconds to avoid race condition with DB update
-        setPausePollingUntil(Date.now() + 15000)
+        pausePollingUntilRef.current = Date.now() + 15000
 
         await fetchRecentEntries(currentEntry.employee_id)
 
@@ -275,7 +275,7 @@ export const useTimeTracking = (companyId?: string) => {
 
           // Poll for updates every 10 seconds
           pollInterval = setInterval(() => {
-            if (isMounted && Date.now() >= pausePollingUntil) {
+            if (isMounted && Date.now() >= pausePollingUntilRef.current) {
               fetchCurrentEntry(employeeId)
               fetchRecentEntries(employeeId)
             }
@@ -317,7 +317,7 @@ export const useTimeTracking = (companyId?: string) => {
       }))
 
       // Pause polling to avoid race condition
-      setPausePollingUntil(Date.now() + 2000)
+      pausePollingUntilRef.current = Date.now() + 2000
 
       return { success: true, data }
     } catch (error) {
@@ -355,7 +355,7 @@ export const useTimeTracking = (companyId?: string) => {
       }))
 
       // Pause polling to avoid race condition
-      setPausePollingUntil(Date.now() + 2000)
+      pausePollingUntilRef.current = Date.now() + 2000
 
       return { success: true, data }
     } catch (error) {
