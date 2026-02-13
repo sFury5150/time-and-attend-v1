@@ -70,6 +70,7 @@ const TimeClockWidget = () => {
   }, []);
 
   const handleClockIn = async () => {
+    console.log('handleClockIn called manually');
     if (!employeeId) {
       toast({
         title: "Error",

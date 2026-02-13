@@ -214,7 +214,11 @@ export const useTimeTracking = (companyId?: string) => {
           currentEntry: null,
         }))
 
-        await fetchRecentEntries(currentEntry.employee_id)
+        // Refetch to confirm status changed
+        setTimeout(() => {
+          fetchCurrentEntry(currentEntry.employee_id)
+          fetchRecentEntries(currentEntry.employee_id)
+        }, 500)
 
         return { success: true, data }
       } catch (error) {
@@ -337,6 +341,11 @@ export const useTimeTracking = (companyId?: string) => {
         ...prev,
         currentEntry: data,
       }))
+
+      // Refetch to confirm status changed
+      setTimeout(() => {
+        fetchCurrentEntry(state.currentEntry?.employee_id)
+      }, 300)
 
       return { success: true, data }
     } catch (error) {
