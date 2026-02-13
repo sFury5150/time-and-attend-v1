@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import type {
@@ -36,9 +36,7 @@ export const useTimeTracking = (companyId?: string) => {
     error: null,
   })
 
-  const pausePollingUntilRef = useRef<number>(0)
-
-  // Get current active time entry
+  // Get current active time entry (only from last 24 hours)
   const fetchCurrentEntry = useCallback(async (employeeId?: string) => {
     if (!user && !employeeId) return
 
@@ -51,6 +49,10 @@ export const useTimeTracking = (companyId?: string) => {
       if (employeeId) {
         query = query.eq('employee_id', employeeId)
       }
+
+      // Only fetch entries from the last 24 hours
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      query = query.gte('clock_in_time', oneDayAgo)
 
       const { data, error } = await query
         .order('clock_in_time', { ascending: false })
@@ -141,10 +143,8 @@ export const useTimeTracking = (companyId?: string) => {
           currentEntry: data,
         }))
 
-        // Fetch recent entries after a brief delay to ensure DB is updated
-        setTimeout(() => {
-          fetchRecentEntries(employeeId)
-        }, 100)
+        // Manually refetch to update UI
+        fetchRecentEntries(employeeId)
 
         return { success: true, data }
       } catch (error) {
@@ -214,9 +214,6 @@ export const useTimeTracking = (companyId?: string) => {
           currentEntry: null,
         }))
 
-        // Pause polling for 15 seconds to avoid race condition with DB update
-        pausePollingUntilRef.current = Date.now() + 15000
-
         await fetchRecentEntries(currentEntry.employee_id)
 
         return { success: true, data }
@@ -252,11 +249,10 @@ export const useTimeTracking = (companyId?: string) => {
     []
   )
 
-  // Set up polling (fallback instead of real-time subscription which can hang)
+  // Initial fetch on mount
   useEffect(() => {
     if (!user) return
 
-    let pollInterval: NodeJS.Timeout | null = null
     let isMounted = true
 
     // Get current employee ID from user's profile
@@ -269,17 +265,9 @@ export const useTimeTracking = (companyId?: string) => {
         if (isMounted && data && data.length > 0) {
           const employeeId = data[0].id
           
-          // Initial fetch
+          // Initial fetch only
           fetchCurrentEntry(employeeId)
           fetchRecentEntries(employeeId)
-
-          // Poll for updates every 10 seconds
-          pollInterval = setInterval(() => {
-            if (isMounted && Date.now() >= pausePollingUntilRef.current) {
-              fetchCurrentEntry(employeeId)
-              fetchRecentEntries(employeeId)
-            }
-          }, 10000)
         }
       })
       .catch((error) => {
@@ -288,7 +276,6 @@ export const useTimeTracking = (companyId?: string) => {
 
     return () => {
       isMounted = false
-      if (pollInterval) clearInterval(pollInterval)
     }
   }, [user, fetchCurrentEntry, fetchRecentEntries])
 
@@ -315,9 +302,6 @@ export const useTimeTracking = (companyId?: string) => {
         ...prev,
         currentEntry: data,
       }))
-
-      // Pause polling to avoid race condition
-      pausePollingUntilRef.current = Date.now() + 2000
 
       return { success: true, data }
     } catch (error) {
@@ -353,9 +337,6 @@ export const useTimeTracking = (companyId?: string) => {
         ...prev,
         currentEntry: data,
       }))
-
-      // Pause polling to avoid race condition
-      pausePollingUntilRef.current = Date.now() + 2000
 
       return { success: true, data }
     } catch (error) {
