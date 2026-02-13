@@ -276,35 +276,41 @@ export const useTimeTracking = (companyId?: string) => {
 
   // Set up polling (fallback instead of real-time subscription which can hang)
   useEffect(() => {
-    if (user) {
-      // Get current employee ID from user's profile
-      supabase
-        .from('employees')
-        .select('id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            const employeeId = data[0].id
-            
-            // Initial fetch
-            fetchCurrentEntry(employeeId)
-            fetchRecentEntries(employeeId)
+    if (!user) return
 
-            // Poll for updates every 5 seconds
-            const pollInterval = setInterval(() => {
+    let pollInterval: NodeJS.Timeout | null = null
+    let isMounted = true
+
+    // Get current employee ID from user's profile
+    supabase
+      .from('employees')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .then(({ data }) => {
+        if (isMounted && data && data.length > 0) {
+          const employeeId = data[0].id
+          
+          // Initial fetch
+          fetchCurrentEntry(employeeId)
+          fetchRecentEntries(employeeId)
+
+          // Poll for updates every 10 seconds (increased interval to avoid thrashing)
+          pollInterval = setInterval(() => {
+            if (isMounted) {
               fetchCurrentEntry(employeeId)
               fetchRecentEntries(employeeId)
-            }, 5000)
-
-            return () => {
-              clearInterval(pollInterval)
             }
-          }
-        })
-        .catch((error) => {
-          console.error('Error fetching employee ID:', error)
-        })
+          }, 10000)
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching employee ID:', error)
+      })
+
+    return () => {
+      isMounted = false
+      if (pollInterval) clearInterval(pollInterval)
     }
   }, [user, fetchCurrentEntry, fetchRecentEntries])
 
