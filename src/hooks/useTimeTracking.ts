@@ -273,13 +273,13 @@ export const useTimeTracking = (companyId?: string) => {
           fetchCurrentEntry(employeeId)
           fetchRecentEntries(employeeId)
 
-          // TODO: Polling temporarily disabled to debug infinite render loop
-          // pollInterval = setInterval(() => {
-          //   if (isMounted && Date.now() >= pausePollingUntil) {
-          //     fetchCurrentEntry(employeeId)
-          //     fetchRecentEntries(employeeId)
-          //   }
-          // }, 10000)
+          // Poll for updates every 10 seconds
+          pollInterval = setInterval(() => {
+            if (isMounted && Date.now() >= pausePollingUntil) {
+              fetchCurrentEntry(employeeId)
+              fetchRecentEntries(employeeId)
+            }
+          }, 10000)
         }
       })
       .catch((error) => {
@@ -290,7 +290,7 @@ export const useTimeTracking = (companyId?: string) => {
       isMounted = false
       if (pollInterval) clearInterval(pollInterval)
     }
-  }, [user, fetchCurrentEntry, fetchRecentEntries, pausePollingUntil])
+  }, [user, fetchCurrentEntry, fetchRecentEntries])
 
   // Start break
   const startBreak = useCallback(async () => {
